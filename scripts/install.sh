@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 set -euo pipefail
 
@@ -9,9 +9,18 @@ BACKUP_DIR="${STATE_DIR}/backups/$(date +%Y%m%d-%H%M%S)"
 MANIFEST_FILE="${BACKUP_DIR}/manifest.json"
 
 DRY_RUN=false
+TAP_EXISTED=true
+YABAI_PKG_EXISTED=true
+SKHD_PKG_EXISTED=true
+YABAI_CFG_EXISTED=false
+YABAI_BACKUP_PATH=""
+SKHD_CFG_EXISTED=false
+SKHD_BACKUP_PATH=""
+YABAI_WAS_RUNNING=false
+SKHD_WAS_RUNNING=false
 
 log() {
-  echo "[open-omarchy] $1"
+  echo "[open-omarchy] $1" >&2
 }
 
 die() {
@@ -21,7 +30,7 @@ die() {
 
 run() {
   if [ "$DRY_RUN" = true ]; then
-    echo "[DRY-RUN] Would run: $*"
+    echo "[DRY-RUN] Would run: $*" >&2
   else
     "$@"
   fi
@@ -112,7 +121,7 @@ EOF
 )
 
   if [ "$DRY_RUN" = true ]; then
-    echo "[DRY-RUN] Would write manifest to ${MANIFEST_FILE}"
+    echo "[DRY-RUN] Would write manifest to ${MANIFEST_FILE}" >&2
   else
     echo "$manifest" > "$MANIFEST_FILE"
     log "Manifest written to ${MANIFEST_FILE}"
@@ -122,9 +131,9 @@ EOF
 install_homebrew() {
   log "Checking Homebrew tap..."
 
-  local tap_existed="true"
+  TAP_EXISTED="true"
   if ! brew tap | grep -q "^asmvik/formulae$"; then
-    tap_existed="false"
+    TAP_EXISTED="false"
     run brew tap asmvik/formulae
   else
     log "Tap asmvik/formulae already present."
@@ -132,23 +141,21 @@ install_homebrew() {
 
   log "Checking packages..."
 
-  local yabai_existed="true"
+  YABAI_PKG_EXISTED="true"
   if ! brew list yabai >/dev/null 2>&1; then
-    yabai_existed="false"
+    YABAI_PKG_EXISTED="false"
     run brew install asmvik/formulae/yabai
   else
     log "Package yabai already installed."
   fi
 
-  local skhd_existed="true"
+  SKHD_PKG_EXISTED="true"
   if ! brew list skhd >/dev/null 2>&1; then
-    skhd_existed="false"
+    SKHD_PKG_EXISTED="false"
     run brew install asmvik/formulae/skhd
   else
     log "Package skhd already installed."
   fi
-
-  echo "${tap_existed}|${yabai_existed}|${skhd_existed}"
 }
 
 install_configs() {
@@ -157,47 +164,41 @@ install_configs() {
   run mkdir -p "${HOME}/.config/yabai"
   run mkdir -p "${HOME}/.config/skhd"
 
-  local yabai_backup_path=""
-  local skhd_backup_path=""
+  YABAI_BACKUP_PATH=""
+  SKHD_BACKUP_PATH=""
 
-  local yabai_existed
-  yabai_existed=$(backup_config "${HOME}/.config/yabai/yabairc" "config/yabai")
-  if [ "$yabai_existed" = "true" ]; then
-    yabai_backup_path="${BACKUP_DIR}/config/yabai/yabairc"
+  YABAI_CFG_EXISTED=$(backup_config "${HOME}/.config/yabai/yabairc" "config/yabai")
+  if [ "$YABAI_CFG_EXISTED" = "true" ]; then
+    YABAI_BACKUP_PATH="${BACKUP_DIR}/config/yabai/yabairc"
   fi
 
-  local skhd_existed
-  skhd_existed=$(backup_config "${HOME}/.config/skhd/skhdrc" "config/skhd")
-  if [ "$skhd_existed" = "true" ]; then
-    skhd_backup_path="${BACKUP_DIR}/config/skhd/skhdrc"
+  SKHD_CFG_EXISTED=$(backup_config "${HOME}/.config/skhd/skhdrc" "config/skhd")
+  if [ "$SKHD_CFG_EXISTED" = "true" ]; then
+    SKHD_BACKUP_PATH="${BACKUP_DIR}/config/skhd/skhdrc"
   fi
 
   run cp "${REPO_DIR}/config/yabai/yabairc" "${HOME}/.config/yabai/yabairc"
   run cp "${REPO_DIR}/config/skhd/skhdrc" "${HOME}/.config/skhd/skhdrc"
-
-  echo "${yabai_existed}|${yabai_backup_path}|${skhd_existed}|${skhd_backup_path}"
 }
 
-start_services() {
-  log "Starting services..."
-
-  local yabai_running="false"
-  local skhd_running="false"
+detect_services() {
+  log "Checking running services..."
 
   if pgrep -x yabai >/dev/null 2>&1; then
-    yabai_running="true"
+    YABAI_WAS_RUNNING="true"
     log "yabai was already running."
   fi
 
   if pgrep -x skhd >/dev/null 2>&1; then
-    skhd_running="true"
+    SKHD_WAS_RUNNING="true"
     log "skhd was already running."
   fi
+}
 
+start_services() {
+  log "Starting services..."
   run yabai --start-service
   run skhd --start-service
-
-  echo "${yabai_running}|${skhd_running}"
 }
 
 post_install() {
@@ -245,37 +246,22 @@ main() {
     mkdir -p "$BACKUP_DIR"
   fi
 
-  local hb_result
-  hb_result=$(install_homebrew)
-  local tap_existed yabai_pkg_existed skhd_pkg_existed
-  tap_existed=$(echo "$hb_result" | cut -d'|' -f1)
-  yabai_pkg_existed=$(echo "$hb_result" | cut -d'|' -f2)
-  skhd_pkg_existed=$(echo "$hb_result" | cut -d'|' -f3)
-
-  local cfg_result
-  cfg_result=$(install_configs)
-  local yabai_cfg_existed yabai_backup skhd_cfg_existed skhd_backup
-  yabai_cfg_existed=$(echo "$cfg_result" | cut -d'|' -f1)
-  yabai_backup=$(echo "$cfg_result" | cut -d'|' -f2)
-  skhd_cfg_existed=$(echo "$cfg_result" | cut -d'|' -f3)
-  skhd_backup=$(echo "$cfg_result" | cut -d'|' -f4)
-
-  local svc_result
-  svc_result=$(start_services)
-  local yabai_running skhd_running
-  yabai_running=$(echo "$svc_result" | cut -d'|' -f1)
-  skhd_running=$(echo "$svc_result" | cut -d'|' -f2)
+  install_homebrew
+  install_configs
+  detect_services
 
   write_manifest \
-    "$tap_existed" \
-    "$yabai_pkg_existed" \
-    "$skhd_pkg_existed" \
-    "$yabai_cfg_existed" \
-    "$yabai_backup" \
-    "$skhd_cfg_existed" \
-    "$skhd_backup" \
-    "$yabai_running" \
-    "$skhd_running"
+    "$TAP_EXISTED" \
+    "$YABAI_PKG_EXISTED" \
+    "$SKHD_PKG_EXISTED" \
+    "$YABAI_CFG_EXISTED" \
+    "$YABAI_BACKUP_PATH" \
+    "$SKHD_CFG_EXISTED" \
+    "$SKHD_BACKUP_PATH" \
+    "$YABAI_WAS_RUNNING" \
+    "$SKHD_WAS_RUNNING"
+
+  start_services
 
   if [ "$DRY_RUN" = false ]; then
     post_install

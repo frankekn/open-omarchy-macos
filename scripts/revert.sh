@@ -1,8 +1,7 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 STATE_DIR="${HOME}/.local/state/open-omarchy-macos"
 
 DRY_RUN=false
@@ -12,7 +11,7 @@ REMOVE_TAP=false
 DELETE_CREATED=false
 
 log() {
-  echo "[open-omarchy] $1"
+  echo "[open-omarchy] $1" >&2
 }
 
 die() {
@@ -22,15 +21,25 @@ die() {
 
 run() {
   if [ "$DRY_RUN" = true ]; then
-    echo "[DRY-RUN] Would run: $*"
+    echo "[DRY-RUN] Would run: $*" >&2
   else
     "$@"
   fi
 }
 
+preflight() {
+  if ! command -v jq >/dev/null 2>&1; then
+    die "jq not found. Install it with: brew install jq"
+  fi
+}
+
 find_latest_manifest() {
+  if [ ! -d "${STATE_DIR}/backups" ]; then
+    die "No backup manifest found in ${STATE_DIR}/backups"
+  fi
+
   local latest
-  latest=$(find "${STATE_DIR}/backups" -name "manifest.json" -type f 2>/dev/null | sort | tail -n1)
+  latest=$(find "${STATE_DIR}/backups" -name "manifest.json" -type f 2>/dev/null | sort | tail -n1 || true)
   if [ -z "$latest" ]; then
     die "No backup manifest found in ${STATE_DIR}/backups"
   fi
@@ -130,8 +139,39 @@ remove_tap() {
   tap_added=$(jq -r '.homebrew.tap_asmvik_formulae_added_by_install' "$manifest")
 
   if [ "$tap_added" = "true" ]; then
-    run brew untap asmvik/formulae || true
-    log "Removed tap asmvik/formulae."
+    if run brew untap asmvik/formulae; then
+      log "Removed tap asmvik/formulae."
+    else
+      log "Could not remove tap asmvik/formulae; it may still be needed by installed formulae."
+    fi
+  fi
+}
+
+restore_service_state() {
+  local manifest="$1"
+
+  log "Restoring previous service state..."
+
+  local yabai_was_running skhd_was_running
+  yabai_was_running=$(jq -r '.services.yabai_was_running_before' "$manifest")
+  skhd_was_running=$(jq -r '.services.skhd_was_running_before' "$manifest")
+
+  if [ "$yabai_was_running" = "true" ]; then
+    if command -v yabai >/dev/null 2>&1; then
+      run yabai --start-service
+      log "Restarted yabai because it was running before install."
+    else
+      log "yabai was running before install, but the command is no longer available."
+    fi
+  fi
+
+  if [ "$skhd_was_running" = "true" ]; then
+    if command -v skhd >/dev/null 2>&1; then
+      run skhd --start-service
+      log "Restarted skhd because it was running before install."
+    else
+      log "skhd was running before install, but the command is no longer available."
+    fi
   fi
 }
 
@@ -171,6 +211,8 @@ main() {
     log "DRY RUN MODE — no changes will be made"
   fi
 
+  preflight
+
   local manifest
   if [ -n "$BACKUP_PATH" ]; then
     if [ -f "$BACKUP_PATH" ]; then
@@ -190,6 +232,7 @@ main() {
   restore_configs "$manifest"
   uninstall_packages "$manifest"
   remove_tap "$manifest"
+  restore_service_state "$manifest"
 
   log "Revert complete."
   echo ""
