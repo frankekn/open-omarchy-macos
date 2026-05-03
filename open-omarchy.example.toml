@@ -1,0 +1,50 @@
+# open-omarchy-macos configuration template
+#
+# Copy to ~/.config/open-omarchy-macos/config.toml and edit.
+# All keys are optional; defaults are shown.
+
+# ── Projects ────────────────────────────────────────────────────────────────
+
+# Directories scanned by the project picker (Alt+p).
+# Each entry is searched one level deep for git repos or plain directories.
+project_roots = [
+  "~/Documents/GitHub",
+]
+
+# ── Workspace ────────────────────────────────────────────────────────────────
+
+# Agent binary to open in the right-side pane.
+# Supported values: "opencode", "codex", "claude"
+# Override per-shell with TMUX_DEV_AGENT env var.
+agent = "opencode"
+
+# Editor binary to open in the left-side pane.
+editor = "nvim"
+
+# tmux session name for the Work session (used by `open-omarchy work`).
+session_name = "Work"
+
+# ── Layout ───────────────────────────────────────────────────────────────────
+
+[layout]
+
+# Width percentage of the editor (left) pane.
+# The agent pane takes the remainder.
+main_pct = 60
+
+# Open a bottom shell pane by default in every dev window.
+# Toggle on demand with Alt+s regardless of this setting.
+bottom_shell = false
+
+# Height percentage of the bottom shell pane (when shown).
+bottom_pct = 25
+
+# ── Modules ──────────────────────────────────────────────────────────────────
+
+# Which modules are installed by `open-omarchy install`.
+# Comment out any module you want to skip.
+[modules]
+desktop  = true   # yabai + skhd configs
+tmux     = true   # tmux.conf + dev-window scripts
+nvim     = true   # init.lua
+terminal = true   # Ghostty config (Kaku: patch/docs only)

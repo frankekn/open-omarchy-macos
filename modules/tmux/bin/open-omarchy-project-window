@@ -1,0 +1,17 @@
+#!/bin/zsh
+set -euo pipefail
+
+root="${OPEN_OMARCHY_PROJECT_ROOT:-$HOME/Documents/GitHub}"
+
+if [[ ! -d "$root" ]]; then
+  echo "Project root not found: $root" >&2
+  exit 1
+fi
+
+project_path="$(fd -a -t d -d 1 . "$root" | sort | fzf --prompt='Project > ' --height=100% --border --preview 'basename {} && git -C {} status --short --branch 2>/dev/null')"
+
+if [[ -z "$project_path" ]]; then
+  exit 0
+fi
+
+OPEN_OMARCHY_PROJECT_PATH="$project_path" "$HOME/.local/bin/open-omarchy-dev-window"

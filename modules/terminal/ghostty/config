@@ -1,0 +1,61 @@
+# Stable Ghostty layout defaults
+# Use `t` to attach to the shared Work tmux session.
+window-inherit-working-directory = true
+
+# Dark palette shared with Kaku/Neovim.
+foreground = d4d4d4
+background = 1e1e1e
+cursor-color = 569cd6
+selection-background = 264f78
+selection-foreground = d4d4d4
+palette = 0=000000
+palette = 1=cd3131
+palette = 2=0dbc79
+palette = 3=e5e510
+palette = 4=2472c8
+palette = 5=bc3fbc
+palette = 6=11a8cd
+palette = 7=e5e5e5
+palette = 8=666666
+palette = 9=f14c4c
+palette = 10=23d18b
+palette = 11=f5f543
+palette = 12=3b8eea
+palette = 13=d670d6
+palette = 14=29b8db
+palette = 15=e5e5e5
+
+# Keep split panes visually consistent with the Kaku layout.
+unfocused-split-opacity = 1
+split-divider-color = 6e738d
+split-preserve-zoom = navigation
+
+# Layout keys
+# Cmd+T opens a normal shell tab; run `t` to restore the shared tmux state.
+keybind = super+t=new_tab
+
+# macOS often reserves Ctrl+Space for input sources. This makes Ghostty send the
+# tmux prefix byte when the event reaches the terminal.
+keybind = control+space=text:\x00
+
+# Cmd+D creates a right split, then approximates a 68/32 left/right ratio.
+keybind = super+d=new_split:right
+keybind = chain=goto_split:left
+keybind = chain=resize_split:right,560
+keybind = chain=goto_split:right
+
+keybind = super+shift+d=new_split:down
+keybind = super+shift+e=equalize_splits
+keybind = super+shift+enter=toggle_split_zoom
+
+# Pane navigation
+keybind = super+alt+left=goto_split:left
+keybind = super+alt+right=goto_split:right
+keybind = super+alt+up=goto_split:up
+keybind = super+alt+down=goto_split:down
+
+# Fine resize controls
+keybind = super+ctrl+left=resize_split:left,60
+keybind = super+ctrl+right=resize_split:right,60
+keybind = super+ctrl+up=resize_split:up,60
+keybind = super+ctrl+down=resize_split:down,60

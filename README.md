@@ -102,8 +102,8 @@ Check current setup state:
 
 ## Config Files
 
-- `config/yabai/yabairc` → installed to `~/.config/yabai/yabairc`
-- `config/skhd/skhdrc` → installed to `~/.config/skhd/skhdrc`
+- `modules/desktop/yabai/yabairc` → installed to `~/.config/yabai/yabairc`
+- `modules/desktop/skhd/skhdrc` → installed to `~/.config/skhd/skhdrc`
 
 Edit these after install to customize behavior.
 
@@ -120,17 +120,31 @@ Edit these after install to customize behavior.
 ```
 open-omarchy-macos/
   README.md
-  .gitignore
-  config/
-    yabai/yabairc
-    skhd/skhdrc
+  plan.md
+  task.md
+  open-omarchy.example.toml
+  bin/open-omarchy
+  modules/
+    desktop/
+      yabai/yabairc
+      skhd/skhdrc
+    tmux/
+    nvim/
+    terminal/
   scripts/
     install.sh
     revert.sh
     status.sh
+    doctor.sh
+  docs/
+    workflow.md
+    architecture.md
   state/
     example-manifest.json
 ```
+
+See [docs/workflow.md](docs/workflow.md) for the tmux session/window/pane model.
+See [docs/architecture.md](docs/architecture.md) for the module system and config model.
 
 ## License
 

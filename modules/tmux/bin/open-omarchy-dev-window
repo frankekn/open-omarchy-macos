@@ -1,0 +1,16 @@
+#!/bin/zsh
+set -euo pipefail
+
+editor="${EDITOR:-/opt/homebrew/bin/nvim}"
+agent="${TMUX_DEV_AGENT:-opencode}"
+target_pane="$(tmux display-message -p '#{pane_id}')"
+
+pane_path="${OPEN_OMARCHY_PROJECT_PATH:-$(tmux display-message -p -t "$target_pane" '#{pane_current_path}')}"
+window_name="$(basename "$pane_path")"
+
+new_pane="$(tmux new-window -c "$pane_path" -n "$window_name" -P -F '#{pane_id}')"
+agent_pane="$(tmux split-window -h -p 40 -t "$new_pane" -c "$pane_path" -P -F '#{pane_id}')"
+
+tmux send-keys -t "$new_pane" C-c C-u "$editor ." C-m
+tmux send-keys -t "$agent_pane" C-c C-u "$agent" C-m
+tmux select-pane -t "$new_pane"

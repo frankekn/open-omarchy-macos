@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# open-omarchy — workspace distro CLI
+# Usage: open-omarchy <command> [options]
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+SCRIPTS_DIR="${REPO_DIR}/scripts"
+
+usage() {
+  cat >&2 <<EOF
+Usage: open-omarchy <command> [options]
+
+Commands:
+  install   Install modules to this machine
+  revert    Restore previous state from backup manifest
+  status    Show current setup state
+  doctor    Check dependencies and config validity
+  work      Attach to (or create) the Work tmux session
+  project   Open a project window via fzf picker
+
+Options (install / revert):
+  --module <name>    Target a single module (desktop | tmux | nvim | terminal)
+  --dry-run          Print actions without making changes
+
+Run 'open-omarchy <command> --help' for command-specific help.
+EOF
+  exit 1
+}
+
+cmd_install() {
+  exec "$SCRIPTS_DIR/install.sh" "$@"
+}
+
+cmd_revert() {
+  exec "$SCRIPTS_DIR/revert.sh" "$@"
+}
+
+cmd_status() {
+  exec "$SCRIPTS_DIR/status.sh" "$@"
+}
+
+cmd_doctor() {
+  exec "$SCRIPTS_DIR/doctor.sh" "$@"
+}
+
+cmd_work() {
+  local session_name="Work"
+
+  # Read session name from config if available
+  local config_file="${HOME}/.config/open-omarchy-macos/config.toml"
+  if [ -f "$config_file" ]; then
+    local cfg_session
+    cfg_session=$(grep -E '^session_name\s*=' "$config_file" | head -n1 | sed 's/.*=\s*"\(.*\)".*/\1/' || true)
+    if [ -n "$cfg_session" ]; then
+      session_name="$cfg_session"
+    fi
+  fi
+
+  if tmux has-session -t "$session_name" 2>/dev/null; then
+    if [ -n "${TMUX:-}" ]; then
+      tmux switch-client -t "$session_name"
+    else
+      tmux attach-session -t "$session_name"
+    fi
+  else
+    tmux new-session -s "$session_name"
+  fi
+}
+
+cmd_project() {
+  # Delegate to the project-window script if tmux module is installed
+  local project_bin="${HOME}/.local/bin/open-omarchy-project-window"
+  local fallback_bin="${HOME}/.local/bin/tmux-project-window"
+
+  if [ -x "$project_bin" ]; then
+    exec "$project_bin" "$@"
+  elif [ -x "$fallback_bin" ]; then
+    exec "$fallback_bin" "$@"
+  else
+    echo "[open-omarchy] open-omarchy-project-window not found." >&2
+    echo "Run: open-omarchy install --module tmux" >&2
+    exit 1
+  fi
+}
+
+[ $# -eq 0 ] && usage
+
+COMMAND="$1"
+shift
+
+case "$COMMAND" in
+  install)  cmd_install  "$@" ;;
+  revert)   cmd_revert   "$@" ;;
+  status)   cmd_status   "$@" ;;
+  doctor)   cmd_doctor   "$@" ;;
+  work)     cmd_work     "$@" ;;
+  project)  cmd_project  "$@" ;;
+  -h|--help|help) usage ;;
+  *) echo "[open-omarchy] Unknown command: $COMMAND" >&2; usage ;;
+esac

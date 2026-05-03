@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# scripts/install.sh — open-omarchy-macos installer
+# Usage: install.sh [--module <name>] [--dry-run]
+# Modules: desktop | tmux | nvim | terminal | all (default)
 
 set -euo pipefail
 
@@ -9,15 +12,10 @@ BACKUP_DIR="${STATE_DIR}/backups/$(date +%Y%m%d-%H%M%S)"
 MANIFEST_FILE="${BACKUP_DIR}/manifest.json"
 
 DRY_RUN=false
-TAP_EXISTED=true
-YABAI_PKG_EXISTED=true
-SKHD_PKG_EXISTED=true
-YABAI_CFG_EXISTED=false
-YABAI_BACKUP_PATH=""
-SKHD_CFG_EXISTED=false
-SKHD_BACKUP_PATH=""
-YABAI_WAS_RUNNING=false
-SKHD_WAS_RUNNING=false
+MODULES=()
+
+# Entries appended by each module install: "src|dest|backed_up|backup_path"
+INSTALLED_FILES=()
 
 log() {
   echo "[open-omarchy] $1" >&2
@@ -36,29 +34,10 @@ run() {
   fi
 }
 
-preflight() {
-  log "Running preflight checks..."
-
-  if ! command -v brew >/dev/null 2>&1; then
-    die "Homebrew not found. Install from https://brew.sh"
-  fi
-
-  if ! command -v jq >/dev/null 2>&1; then
-    die "jq not found. Install it with: brew install jq"
-  fi
-
-  local os_version
-  os_version=$(sw_vers -productVersion)
-  log "macOS version: $os_version"
-
-  local arch
-  arch=$(uname -m)
-  log "Architecture: $arch"
-
-  log "Preflight OK."
-}
-
-backup_config() {
+# backup_file <src> <backup_subdir>
+# Copies src to BACKUP_DIR/backup_subdir/ if it exists.
+# Prints "true" if backed up, "false" otherwise.
+backup_file() {
   local src="$1"
   local backup_subdir="$2"
 
@@ -72,67 +51,77 @@ backup_config() {
   fi
 }
 
-write_manifest() {
-  local tap_existed="$1"
-  local yabai_existed="$2"
-  local skhd_existed="$3"
-  local yabai_config_existed="$4"
-  local yabai_backup_path="$5"
-  local skhd_config_existed="$6"
-  local skhd_backup_path="$7"
-  local yabai_running="$8"
-  local skhd_running="$9"
+# install_file <src> <dest>
+# Backs up dest if it exists, then copies src to dest.
+# Records the operation in INSTALLED_FILES.
+install_file() {
+  local src="$1"
+  local dest="$2"
+  local subdir
+  subdir="backup/$(basename "$(dirname "$dest")")"
 
+  local backed_up
+  backed_up=$(backup_file "$dest" "$subdir")
+  local backup_path=""
+  if [ "$backed_up" = "true" ]; then
+    backup_path="${BACKUP_DIR}/${subdir}/$(basename "$dest")"
+  fi
+
+  run mkdir -p "$(dirname "$dest")"
+  run cp "$src" "$dest"
+
+  INSTALLED_FILES+=("${src}|${dest}|${backed_up}|${backup_path}")
+  log "Installed: $dest"
+}
+
+# install_bin <src> <dest_dir>
+# Copies src as executable to dest_dir/basename(src).
+install_bin() {
+  local src="$1"
+  local dest_dir="$2"
+  local dest="${dest_dir}/$(basename "$src")"
+
+  local backed_up
+  backed_up=$(backup_file "$dest" "backup/bin")
+  local backup_path=""
+  if [ "$backed_up" = "true" ]; then
+    backup_path="${BACKUP_DIR}/backup/bin/$(basename "$dest")"
+  fi
+
+  run mkdir -p "$dest_dir"
+  run cp "$src" "$dest"
+  run chmod +x "$dest"
+
+  INSTALLED_FILES+=("${src}|${dest}|${backed_up}|${backup_path}")
+  log "Installed: $dest"
+}
+
+write_manifest() {
   run mkdir -p "$BACKUP_DIR"
+
+  # Build JSON array from INSTALLED_FILES
+  local files_json="[]"
+  for entry in "${INSTALLED_FILES[@]+"${INSTALLED_FILES[@]}"}"; do
+    IFS='|' read -r src dest backed_up backup_path <<< "$entry"
+    files_json=$(echo "$files_json" | jq \
+      --arg src "$src" \
+      --arg dest "$dest" \
+      --argjson backed_up "$backed_up" \
+      --arg backup_path "$backup_path" \
+      '. + [{src: $src, dest: $dest, backed_up: $backed_up, backup_path: (if $backup_path == "" then null else $backup_path end)}]')
+  done
 
   local manifest
   manifest=$(jq -n \
     --arg created_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --arg backup_dir "$BACKUP_DIR" \
-    --arg yabai_config_path "${HOME}/.config/yabai/yabairc" \
-    --arg yabai_backup_path "$yabai_backup_path" \
-    --arg skhd_config_path "${HOME}/.config/skhd/skhdrc" \
-    --arg skhd_backup_path "$skhd_backup_path" \
-    --argjson tap_existed "$tap_existed" \
-    --argjson yabai_existed "$yabai_existed" \
-    --argjson skhd_existed "$skhd_existed" \
-    --argjson yabai_config_existed "$yabai_config_existed" \
-    --argjson skhd_config_existed "$skhd_config_existed" \
-    --argjson yabai_running "$yabai_running" \
-    --argjson skhd_running "$skhd_running" \
+    --argjson files "$files_json" \
     '{
-      schema_version: 1,
+      schema_version: 2,
       created_at: $created_at,
       repo: "open-omarchy-macos",
       backup_dir: $backup_dir,
-      homebrew: {
-        tap_asmvik_formulae_existed_before: $tap_existed,
-        tap_asmvik_formulae_added_by_install: ($tap_existed | not)
-      },
-      packages: {
-        yabai_existed_before: $yabai_existed,
-        yabai_installed_by_install: ($yabai_existed | not),
-        skhd_existed_before: $skhd_existed,
-        skhd_installed_by_install: ($skhd_existed | not)
-      },
-      configs: [
-        {
-          path: $yabai_config_path,
-          existed_before: $yabai_config_existed,
-          backup_path: (if $yabai_backup_path == "" then null else $yabai_backup_path end),
-          created_by_install: ($yabai_config_existed | not)
-        },
-        {
-          path: $skhd_config_path,
-          existed_before: $skhd_config_existed,
-          backup_path: (if $skhd_backup_path == "" then null else $skhd_backup_path end),
-          created_by_install: ($skhd_config_existed | not)
-        }
-      ],
-      services: {
-        yabai_was_running_before: $yabai_running,
-        skhd_was_running_before: $skhd_running
-      }
+      files: $files
     }')
 
   if [ "$DRY_RUN" = true ]; then
@@ -143,98 +132,139 @@ write_manifest() {
   fi
 }
 
-install_homebrew() {
-  log "Checking Homebrew tap..."
+preflight() {
+  log "Preflight checks..."
 
-  TAP_EXISTED="true"
+  if ! command -v brew >/dev/null 2>&1; then
+    die "Homebrew not found. Install from https://brew.sh"
+  fi
+
+  if ! command -v jq >/dev/null 2>&1; then
+    die "jq not found. Install with: brew install jq"
+  fi
+
+  log "macOS $(sw_vers -productVersion) / $(uname -m)"
+  log "Preflight OK."
+}
+
+# ── Module: desktop ──────────────────────────────────────────────────────────
+
+install_desktop() {
+  log "Installing module: desktop"
+
+  # Homebrew tap + packages
   if ! brew tap | grep -q "^asmvik/formulae$"; then
-    TAP_EXISTED="false"
     run brew tap asmvik/formulae
   else
     log "Tap asmvik/formulae already present."
   fi
 
-  log "Checking packages..."
-
-  YABAI_PKG_EXISTED="true"
   if ! brew list yabai >/dev/null 2>&1; then
-    YABAI_PKG_EXISTED="false"
     run brew install asmvik/formulae/yabai
   else
-    log "Package yabai already installed."
+    log "yabai already installed."
   fi
 
-  SKHD_PKG_EXISTED="true"
   if ! brew list skhd >/dev/null 2>&1; then
-    SKHD_PKG_EXISTED="false"
     run brew install asmvik/formulae/skhd
   else
-    log "Package skhd already installed."
-  fi
-}
-
-install_configs() {
-  log "Installing configs..."
-
-  run mkdir -p "${HOME}/.config/yabai"
-  run mkdir -p "${HOME}/.config/skhd"
-
-  YABAI_BACKUP_PATH=""
-  SKHD_BACKUP_PATH=""
-
-  YABAI_CFG_EXISTED=$(backup_config "${HOME}/.config/yabai/yabairc" "config/yabai")
-  if [ "$YABAI_CFG_EXISTED" = "true" ]; then
-    YABAI_BACKUP_PATH="${BACKUP_DIR}/config/yabai/yabairc"
+    log "skhd already installed."
   fi
 
-  SKHD_CFG_EXISTED=$(backup_config "${HOME}/.config/skhd/skhdrc" "config/skhd")
-  if [ "$SKHD_CFG_EXISTED" = "true" ]; then
-    SKHD_BACKUP_PATH="${BACKUP_DIR}/config/skhd/skhdrc"
-  fi
+  install_file "${REPO_DIR}/modules/desktop/yabai/yabairc" "${HOME}/.config/yabai/yabairc"
+  install_file "${REPO_DIR}/modules/desktop/skhd/skhdrc"   "${HOME}/.config/skhd/skhdrc"
 
-  run cp "${REPO_DIR}/config/yabai/yabairc" "${HOME}/.config/yabai/yabairc"
-  run cp "${REPO_DIR}/config/skhd/skhdrc" "${HOME}/.config/skhd/skhdrc"
-}
-
-detect_services() {
-  log "Checking running services..."
-
-  if pgrep -x yabai >/dev/null 2>&1; then
-    YABAI_WAS_RUNNING="true"
-    log "yabai was already running."
-  fi
-
-  if pgrep -x skhd >/dev/null 2>&1; then
-    SKHD_WAS_RUNNING="true"
-    log "skhd was already running."
-  fi
-}
-
-start_services() {
-  log "Starting services..."
+  # Start services
   run yabai --start-service
   run skhd --start-service
+
+  if [ "$DRY_RUN" = false ]; then
+    echo ""
+    echo "========================================"
+    echo "IMPORTANT: Grant Accessibility permissions"
+    echo "========================================"
+    echo "System Settings → Privacy & Security → Accessibility"
+    echo "Add and enable: $(brew --prefix)/bin/yabai  and  $(brew --prefix)/bin/skhd"
+    echo "Then: yabai --restart-service && skhd --restart-service"
+    echo "NOTE: SIP was not changed. Scripting addition was not installed."
+    echo ""
+  fi
 }
 
-post_install() {
-  log "Install complete."
-  echo ""
-  echo "========================================"
-  echo "IMPORTANT: Grant Accessibility permissions"
-  echo "========================================"
-  echo ""
-  echo "1. Open System Settings → Privacy & Security → Accessibility"
-  echo "2. Add and enable:"
-  echo "   - $(brew --prefix)/bin/yabai"
-  echo "   - $(brew --prefix)/bin/skhd"
-  echo ""
-  echo "3. Restart services:"
-  echo "   yabai --restart-service"
-  echo "   skhd --restart-service"
-  echo ""
-  echo "NOTE: SIP was not changed."
-  echo "NOTE: Scripting addition was not installed."
-  echo ""
+# ── Module: tmux ─────────────────────────────────────────────────────────────
+
+install_tmux() {
+  log "Installing module: tmux"
+
+  if ! command -v tmux >/dev/null 2>&1; then
+    run brew install tmux
+  else
+    log "tmux already installed."
+  fi
+
+  install_file \
+    "${REPO_DIR}/modules/tmux/tmux.conf" \
+    "${HOME}/.config/tmux/tmux.conf"
+
+  install_bin \
+    "${REPO_DIR}/modules/tmux/bin/open-omarchy-dev-window" \
+    "${HOME}/.local/bin"
+
+  install_bin \
+    "${REPO_DIR}/modules/tmux/bin/open-omarchy-project-window" \
+    "${HOME}/.local/bin"
+
+  log "tmux module installed. Reload config: tmux source ~/.config/tmux/tmux.conf"
+}
+
+# ── Module: nvim ─────────────────────────────────────────────────────────────
+
+install_nvim() {
+  log "Installing module: nvim"
+
+  if ! command -v nvim >/dev/null 2>&1; then
+    run brew install neovim
+  else
+    log "nvim already installed."
+  fi
+
+  install_file \
+    "${REPO_DIR}/modules/nvim/init.lua" \
+    "${HOME}/.config/nvim/init.lua"
+
+  log "nvim module installed. Plugins install on first launch."
+}
+
+# ── Module: terminal ─────────────────────────────────────────────────────────
+
+install_terminal() {
+  log "Installing module: terminal"
+
+  if ! command -v /Applications/Ghostty.app/Contents/MacOS/ghostty >/dev/null 2>&1 \
+    && ! brew list --cask ghostty >/dev/null 2>&1; then
+    run brew install --cask ghostty
+  else
+    log "Ghostty already installed."
+  fi
+
+  install_file \
+    "${REPO_DIR}/modules/terminal/ghostty/config" \
+    "${HOME}/.config/ghostty/config"
+
+  log "Kaku: apply modules/terminal/kaku/kaku.patch.lua manually to ~/.config/kaku/kaku.lua"
+  log "terminal module installed."
+}
+
+# ── Dispatch ─────────────────────────────────────────────────────────────────
+
+install_module() {
+  case "$1" in
+    desktop)  install_desktop  ;;
+    tmux)     install_tmux     ;;
+    nvim)     install_nvim     ;;
+    terminal) install_terminal ;;
+    *) die "Unknown module: $1  (valid: desktop | tmux | nvim | terminal)" ;;
+  esac
 }
 
 main() {
@@ -244,43 +274,36 @@ main() {
         DRY_RUN=true
         shift
         ;;
+      --module)
+        [ $# -gt 1 ] || die "--module requires a value"
+        MODULES+=("$2")
+        shift 2
+        ;;
       *)
         die "Unknown option: $1"
         ;;
     esac
   done
 
-  if [ "$DRY_RUN" = true ]; then
-    log "DRY RUN MODE — no changes will be made"
-  fi
+  [ "$DRY_RUN" = true ] && log "DRY RUN MODE — no changes will be made"
 
   preflight
 
-  log "Creating backup directory: ${BACKUP_DIR}"
   if [ "$DRY_RUN" = false ]; then
     mkdir -p "$BACKUP_DIR"
   fi
 
-  install_homebrew
-  install_configs
-  detect_services
-
-  write_manifest \
-    "$TAP_EXISTED" \
-    "$YABAI_PKG_EXISTED" \
-    "$SKHD_PKG_EXISTED" \
-    "$YABAI_CFG_EXISTED" \
-    "$YABAI_BACKUP_PATH" \
-    "$SKHD_CFG_EXISTED" \
-    "$SKHD_BACKUP_PATH" \
-    "$YABAI_WAS_RUNNING" \
-    "$SKHD_WAS_RUNNING"
-
-  start_services
-
-  if [ "$DRY_RUN" = false ]; then
-    post_install
+  if [ ${#MODULES[@]} -eq 0 ]; then
+    MODULES=(desktop tmux nvim terminal)
   fi
+
+  for module in "${MODULES[@]}"; do
+    install_module "$module"
+  done
+
+  write_manifest
+
+  log "Install complete."
 }
 
 main "$@"

@@ -1,0 +1,9 @@
+# Profile: minimal
+# Desktop tiling only (yabai + skhd). No tmux, nvim, or terminal changes.
+# Install: open-omarchy install --module desktop
+
+[modules]
+desktop  = true
+tmux     = false
+nvim     = false
+terminal = false

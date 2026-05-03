@@ -1,0 +1,22 @@
+# Profile: full
+# All modules: desktop + tmux + nvim + terminal.
+# Install: open-omarchy install  (default)
+
+project_roots = [
+  "~/Documents/GitHub",
+]
+
+agent        = "opencode"
+editor       = "nvim"
+session_name = "Work"
+
+[layout]
+main_pct     = 60
+bottom_shell = false
+bottom_pct   = 25
+
+[modules]
+desktop  = true
+tmux     = true
+nvim     = true
+terminal = true
