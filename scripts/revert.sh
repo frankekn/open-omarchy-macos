@@ -139,7 +139,10 @@ remove_tap() {
   tap_added=$(jq -r '.homebrew.tap_asmvik_formulae_added_by_install' "$manifest")
 
   if [ "$tap_added" = "true" ]; then
-    if run brew untap asmvik/formulae; then
+    if [ "$DRY_RUN" = true ]; then
+      run brew untap asmvik/formulae
+      log "Would remove tap asmvik/formulae."
+    elif brew untap asmvik/formulae; then
       log "Removed tap asmvik/formulae."
     else
       log "Could not remove tap asmvik/formulae; it may still be needed by installed formulae."

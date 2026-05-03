@@ -43,6 +43,10 @@ preflight() {
     die "Homebrew not found. Install from https://brew.sh"
   fi
 
+  if ! command -v jq >/dev/null 2>&1; then
+    die "jq not found. Install it with: brew install jq"
+  fi
+
   local os_version
   os_version=$(sw_vers -productVersion)
   log "macOS version: $os_version"
@@ -82,43 +86,54 @@ write_manifest() {
   run mkdir -p "$BACKUP_DIR"
 
   local manifest
-  manifest=$(cat <<EOF
-{
-  "schema_version": 1,
-  "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "repo": "open-omarchy-macos",
-  "backup_dir": "${BACKUP_DIR}",
-  "homebrew": {
-    "tap_asmvik_formulae_existed_before": ${tap_existed},
-    "tap_asmvik_formulae_added_by_install": $( [ "$tap_existed" = "true" ] && echo "false" || echo "true" )
-  },
-  "packages": {
-    "yabai_existed_before": ${yabai_existed},
-    "yabai_installed_by_install": $( [ "$yabai_existed" = "true" ] && echo "false" || echo "true" ),
-    "skhd_existed_before": ${skhd_existed},
-    "skhd_installed_by_install": $( [ "$skhd_existed" = "true" ] && echo "false" || echo "true" )
-  },
-  "configs": [
-    {
-      "path": "${HOME}/.config/yabai/yabairc",
-      "existed_before": ${yabai_config_existed},
-      "backup_path": $( [ -n "$yabai_backup_path" ] && echo "\"${yabai_backup_path}\"" || echo "null" ),
-      "created_by_install": $( [ "$yabai_config_existed" = "true" ] && echo "false" || echo "true" )
-    },
-    {
-      "path": "${HOME}/.config/skhd/skhdrc",
-      "existed_before": ${skhd_config_existed},
-      "backup_path": $( [ -n "$skhd_backup_path" ] && echo "\"${skhd_backup_path}\"" || echo "null" ),
-      "created_by_install": $( [ "$skhd_config_existed" = "true" ] && echo "false" || echo "true" )
-    }
-  ],
-  "services": {
-    "yabai_was_running_before": ${yabai_running},
-    "skhd_was_running_before": ${skhd_running}
-  }
-}
-EOF
-)
+  manifest=$(jq -n \
+    --arg created_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg backup_dir "$BACKUP_DIR" \
+    --arg yabai_config_path "${HOME}/.config/yabai/yabairc" \
+    --arg yabai_backup_path "$yabai_backup_path" \
+    --arg skhd_config_path "${HOME}/.config/skhd/skhdrc" \
+    --arg skhd_backup_path "$skhd_backup_path" \
+    --argjson tap_existed "$tap_existed" \
+    --argjson yabai_existed "$yabai_existed" \
+    --argjson skhd_existed "$skhd_existed" \
+    --argjson yabai_config_existed "$yabai_config_existed" \
+    --argjson skhd_config_existed "$skhd_config_existed" \
+    --argjson yabai_running "$yabai_running" \
+    --argjson skhd_running "$skhd_running" \
+    '{
+      schema_version: 1,
+      created_at: $created_at,
+      repo: "open-omarchy-macos",
+      backup_dir: $backup_dir,
+      homebrew: {
+        tap_asmvik_formulae_existed_before: $tap_existed,
+        tap_asmvik_formulae_added_by_install: ($tap_existed | not)
+      },
+      packages: {
+        yabai_existed_before: $yabai_existed,
+        yabai_installed_by_install: ($yabai_existed | not),
+        skhd_existed_before: $skhd_existed,
+        skhd_installed_by_install: ($skhd_existed | not)
+      },
+      configs: [
+        {
+          path: $yabai_config_path,
+          existed_before: $yabai_config_existed,
+          backup_path: (if $yabai_backup_path == "" then null else $yabai_backup_path end),
+          created_by_install: ($yabai_config_existed | not)
+        },
+        {
+          path: $skhd_config_path,
+          existed_before: $skhd_config_existed,
+          backup_path: (if $skhd_backup_path == "" then null else $skhd_backup_path end),
+          created_by_install: ($skhd_config_existed | not)
+        }
+      ],
+      services: {
+        yabai_was_running_before: $yabai_running,
+        skhd_was_running_before: $skhd_running
+      }
+    }')
 
   if [ "$DRY_RUN" = true ]; then
     echo "[DRY-RUN] Would write manifest to ${MANIFEST_FILE}" >&2

@@ -23,7 +23,7 @@ A safe, reversible, Omarchy-inspired macOS desktop setup using [yabai](https://g
 - macOS 11+ (Big Sur or later).
 - Apple Silicon or Intel Mac.
 - [Homebrew](https://brew.sh) installed.
-- `jq` installed for revert support (`brew install jq`).
+- `jq` installed for manifest and revert support (`brew install jq`).
 
 ## Install
 
