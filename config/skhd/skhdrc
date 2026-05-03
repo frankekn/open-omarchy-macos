@@ -1,0 +1,37 @@
+#!/usr/bin/env sh
+
+# open-omarchy-macos skhd config
+# Omarchy-style bindings using cmd as SUPER.
+# NOTE: Avoid cmd+q to preserve native macOS quit behavior.
+
+# Applications
+cmd - return : open -na Ghostty 2>/dev/null || open -na Terminal
+cmd - space : open -na Raycast 2>/dev/null || osascript -e 'tell application "System Events" to keystroke space using command down'
+
+# Focus
+cmd - h : yabai -m window --focus west
+cmd - j : yabai -m window --focus south
+cmd - k : yabai -m window --focus north
+cmd - l : yabai -m window --focus east
+
+# Swap
+cmd + shift - h : yabai -m window --swap west
+cmd + shift - j : yabai -m window --swap south
+cmd + shift - k : yabai -m window --swap north
+cmd + shift - l : yabai -m window --swap east
+
+# Window control
+cmd + shift - q : yabai -m window --close
+cmd - f : yabai -m window --toggle zoom-fullscreen
+cmd + shift - space : yabai -m window --toggle float
+
+# Space switching (native macOS shortcuts work alongside yabai)
+# cmd - 1 : yabai -m space --focus 1
+# cmd - 2 : yabai -m space --focus 2
+# etc.
+
+# Display focus
+cmd + alt - h : yabai -m display --focus west
+cmd + alt - j : yabai -m display --focus south
+cmd + alt - k : yabai -m display --focus north
+cmd + alt - l : yabai -m display --focus east

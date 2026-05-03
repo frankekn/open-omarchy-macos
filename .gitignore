@@ -1,0 +1,12 @@
+# macOS system files
+.DS_Store
+
+# Backup state (lives outside repo)
+state/backups/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
