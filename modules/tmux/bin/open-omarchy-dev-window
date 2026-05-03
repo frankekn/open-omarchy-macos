@@ -18,8 +18,12 @@ window_name="$(basename "$pane_path")"
 new_pane="$(tmux new-window -c "$pane_path" -n "$window_name" -P -F '#{pane_id}')"
 agent_pane="$(tmux split-window -h -p 40 -t "$new_pane" -c "$pane_path" -P -F '#{pane_id}')"
 
+# Shell-escape pane_path before embedding in send-keys so paths containing
+# $, backticks, or other special characters are treated literally.
+safe_path="$(printf '%q' "$pane_path")"
+
 # Explicit cd in each pane so the shell's own cwd is the project root.
 # Without this, Ctrl-C from the agent drops back to wherever the pane was spawned.
-tmux send-keys -t "$new_pane"   C-c C-u "cd \"$pane_path\" && $editor ." C-m
-tmux send-keys -t "$agent_pane" C-c C-u "cd \"$pane_path\" && $agent" C-m
+tmux send-keys -t "$new_pane"   C-c C-u "cd $safe_path && $editor ." C-m
+tmux send-keys -t "$agent_pane" C-c C-u "cd $safe_path && $agent" C-m
 tmux select-pane -t "$new_pane"
