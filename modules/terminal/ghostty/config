@@ -1,6 +1,7 @@
 # Stable Ghostty layout defaults
 # Use `t` to attach to the shared Work tmux session.
 window-inherit-working-directory = true
+macos-option-as-alt = true
 
 # Dark palette shared with Kaku/Neovim.
 foreground = d4d4d4

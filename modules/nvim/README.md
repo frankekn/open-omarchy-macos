@@ -26,6 +26,10 @@ first launch. No manual bootstrap step is required.
 | Binding | Action |
 |---------|--------|
 | `Space e` | Toggle Neo-tree sidebar |
+| `Space f f` | Find files |
+| `Space f g` | Live grep project text |
+| `Space f b` | Find open buffers |
+| `Space f h` | Search help tags |
 | `:Neotree` | Open Neo-tree |
 
 ## Notes

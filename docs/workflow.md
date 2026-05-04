@@ -46,8 +46,8 @@ Alt+c   → clone current project window
 ## On-Demand Panes
 
 ```
-Alt+s   → toggle bottom shell pane (horizontal split, 25%)
-Alt+v   → new vertical pane (right side, 40%)
+Alt+s   → split current pane top/bottom 50/50
+Alt+v   → split current pane left/right 50/50
 ```
 
 ## Switching Windows
@@ -64,6 +64,19 @@ The tmux prefix is `Ctrl+b` (standard) or `Ctrl+Space` if not intercepted by mac
 Note: macOS Input Source shortcut intercepts `Ctrl+Space` by default. Disable
 it in **System Settings → Keyboard → Keyboard Shortcuts → Input Sources** or
 use `Ctrl+b`.
+
+## Keybinding Smoke Test
+
+Run this after changing Ghostty or tmux bindings:
+
+```sh
+./scripts/smoke-keybindings.sh
+```
+
+It checks the repo config, installed config, and live tmux server bindings. It
+cannot prove macOS delivered a physical keypress, but it catches the common
+breakages: Option not treated as Alt, missing `Ctrl+b` fallback, stale installed
+tmux config, and live tmux not loading `Alt+c` / `Alt+p`.
 
 ## Agent
 

@@ -15,6 +15,7 @@ vim.pack.add({
   { src = 'https://github.com/MunifTanjim/nui.nvim' },
   { src = 'https://github.com/nvim-tree/nvim-web-devicons' },
   { src = 'https://github.com/nvim-neo-tree/neo-tree.nvim', version = 'v3.x' },
+  { src = 'https://github.com/ibhagwan/fzf-lua' },
 })
 
 require('neo-tree').setup({
@@ -35,6 +36,12 @@ require('neo-tree').setup({
 })
 
 vim.keymap.set('n', '<leader>e', ':Neotree toggle left<CR>', { silent = true })
+
+local fzf_lua = require('fzf-lua')
+vim.keymap.set('n', '<leader>ff', fzf_lua.files, { desc = 'Find files' })
+vim.keymap.set('n', '<leader>fg', fzf_lua.live_grep, { desc = 'Live grep' })
+vim.keymap.set('n', '<leader>fb', fzf_lua.buffers, { desc = 'Find buffers' })
+vim.keymap.set('n', '<leader>fh', fzf_lua.help_tags, { desc = 'Help tags' })
 
 vim.api.nvim_create_autocmd('VimEnter', {
   callback = function()
