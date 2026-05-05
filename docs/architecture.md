@@ -97,8 +97,8 @@ bin/open-omarchy CLI
 
 - Kaku manages its own config file — the installer cannot safely overwrite it.
   The terminal module provides a patch snippet + documentation only.
-- `Ctrl+Space` is intercepted by macOS Input Source shortcut by default.
-  Use `Ctrl+b` as tmux prefix or disable the macOS shortcut.
+- `Ctrl+Space` is avoided because macOS Input Source shortcuts can intercept it.
+  Use `Ctrl+b` as the tmux prefix.
 - `~/.tmux.conf` (e.g., Tokyo Night + TPM) loads before
   `~/.config/tmux/tmux.conf`. Variable conflicts are possible.
 - `pane-active-border-format` is not a valid tmux option; use

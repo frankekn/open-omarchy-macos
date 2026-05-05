@@ -75,6 +75,23 @@ assert_file_contains() {
   fi
 }
 
+assert_file_not_contains() {
+  local file="$1"
+  local pattern="$2"
+  local label="$3"
+
+  if [ ! -f "$file" ]; then
+    fail "$label missing file: $file"
+    return
+  fi
+
+  if rg -q --fixed-strings -- "$pattern" "$file"; then
+    fail "$label still contains: $pattern"
+  else
+    ok "$label"
+  fi
+}
+
 assert_output_contains() {
   local output="$1"
   local pattern="$2"
@@ -92,7 +109,7 @@ check_ghostty_config() {
   local label="$2"
 
   assert_file_contains "$file" "macos-option-as-alt = true" "$label treats Option as terminal Alt"
-  assert_file_contains "$file" "keybind = control+space=text:\\x00" "$label forwards Ctrl+Space to tmux"
+  assert_file_not_contains "$file" "keybind = control+space=text:\\x00" "$label does not bind Ctrl+Space"
 
   if command -v ghostty >/dev/null 2>&1; then
     if ghostty +validate-config --config-file="$file" >/dev/null 2>&1; then
@@ -109,12 +126,15 @@ check_tmux_config() {
   local file="$1"
   local label="$2"
 
-  assert_file_contains "$file" "set -g prefix C-Space" "$label has Ctrl+Space prefix"
-  assert_file_contains "$file" "set -g prefix2 C-b" "$label has Ctrl+b fallback prefix"
+  assert_file_contains "$file" "set -g prefix C-b" "$label has Ctrl+b prefix"
+  assert_file_contains "$file" "set -g prefix2 None" "$label disables secondary prefix"
+  assert_file_contains "$file" "unbind -q C-Space" "$label unbinds Ctrl+Space prefix"
   assert_file_contains "$file" "bind -n M-c run-shell" "$label has Alt+c dev-window binding"
   assert_file_contains "$file" "bind -n M-p display-popup" "$label has Alt+p project picker binding"
   assert_file_contains "$file" "bind -n M-s split-window -v -p 50" "$label has Alt+s 50/50 horizontal split"
   assert_file_contains "$file" "bind -n M-v split-window -h -p 50" "$label has Alt+v 50/50 vertical split"
+  assert_file_contains "$file" "bind -n M-S-Left swap-window -t -1" "$label has Alt+Shift+Left window move binding"
+  assert_file_contains "$file" "bind -n M-S-Right swap-window -t +1" "$label has Alt+Shift+Right window move binding"
 }
 
 check_repo() {
@@ -150,21 +170,23 @@ check_live_tmux() {
   assert_output_contains "$root_keys" "open-omarchy-project-window" "live tmux Alt+p calls project picker"
   assert_output_contains "$root_keys" "M-s" "live tmux has Alt+s split binding"
   assert_output_contains "$root_keys" "-p 50" "live tmux split bindings use 50 percent"
+  assert_output_contains "$root_keys" "M-S-Left" "live tmux has Alt+Shift+Left window move binding"
+  assert_output_contains "$root_keys" "M-S-Right" "live tmux has Alt+Shift+Right window move binding"
 
   local prefix
   prefix="$(tmux show-options -gqv prefix 2>/dev/null)"
-  if [ "$prefix" = "C-Space" ]; then
-    ok "live tmux primary prefix is Ctrl+Space"
+  if [ "$prefix" = "C-b" ]; then
+    ok "live tmux primary prefix is Ctrl+b"
   else
-    fail "live tmux primary prefix is $prefix, expected C-Space"
+    fail "live tmux primary prefix is $prefix, expected C-b"
   fi
 
   local prefix2
   prefix2="$(tmux show-options -gqv prefix2 2>/dev/null)"
-  if [ "$prefix2" = "C-b" ]; then
-    ok "live tmux fallback prefix is Ctrl+b"
+  if [ "$prefix2" = "None" ]; then
+    ok "live tmux secondary prefix is disabled"
   else
-    fail "live tmux fallback prefix is $prefix2, expected C-b"
+    fail "live tmux secondary prefix is $prefix2, expected None"
   fi
 }
 

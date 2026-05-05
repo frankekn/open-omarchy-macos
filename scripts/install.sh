@@ -214,7 +214,8 @@ install_tmux() {
     "${REPO_DIR}/modules/tmux/bin/open-omarchy-project-window" \
     "${HOME}/.local/bin"
 
-  log "tmux module installed. Reload config: tmux source ~/.config/tmux/tmux.conf"
+  log "tmux module installed. Inside tmux, reload with Ctrl+b q."
+  log "From a shell: tmux source-file ~/.config/tmux/tmux.conf"
 }
 
 # ── Module: nvim ─────────────────────────────────────────────────────────────

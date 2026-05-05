@@ -17,10 +17,4 @@ config.initial_rows = 50
 -- Set KAKU_NO_EDITOR=1 in your shell for helper/agent panes.
 -- Example in tmux: `tmux send-keys "KAKU_NO_EDITOR=1 opencode" C-m`
 
--- Pass Ctrl+Space through to tmux
--- config.keys = config.keys or {}
--- table.insert(config.keys, {
---   key = "Space",
---   mods = "CTRL",
---   action = wezterm.action.SendKey { key = "Space", mods = "CTRL" },
--- })
+-- tmux uses Ctrl+b as its prefix because macOS can intercept Ctrl+Space.

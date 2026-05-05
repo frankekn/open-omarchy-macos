@@ -35,10 +35,6 @@ split-preserve-zoom = navigation
 # Cmd+T opens a normal shell tab; run `t` to restore the shared tmux state.
 keybind = super+t=new_tab
 
-# macOS often reserves Ctrl+Space for input sources. This makes Ghostty send the
-# tmux prefix byte when the event reaches the terminal.
-keybind = control+space=text:\x00
-
 # Cmd+D creates a right split, then approximates a 68/32 left/right ratio.
 keybind = super+d=new_split:right
 keybind = chain=goto_split:left

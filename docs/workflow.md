@@ -50,20 +50,43 @@ Alt+s   → split current pane top/bottom 50/50
 Alt+v   → split current pane left/right 50/50
 ```
 
+## Shell Shortcuts
+
+zsh shortcuts such as `cdx` and `claudeskip` work only in a shell pane. They do
+not run inside full-screen TUI programs such as `opencode`, `codex`, `claude`,
+or `nvim`.
+
+Use `Alt+s` or `Alt+v` to open a shell pane, then run the shortcut there.
+
 ## Switching Windows
 
 ```
 Alt+1 … Alt+9   → switch to window 1–9
+Alt+Left/Right  → switch to previous/next window
+Alt+Shift+Left  → move current window left
+Alt+Shift+Right → move current window right
 Ctrl+b k        → kill current window
 ```
 
 ## Prefix
 
-The tmux prefix is `Ctrl+b` (standard) or `Ctrl+Space` if not intercepted by macOS.
+The tmux prefix is `Ctrl+b`.
 
-Note: macOS Input Source shortcut intercepts `Ctrl+Space` by default. Disable
-it in **System Settings → Keyboard → Keyboard Shortcuts → Input Sources** or
-use `Ctrl+b`.
+`Ctrl+Space` is not used because macOS input source switching can intercept it.
+
+## Reloading tmux Config
+
+Inside tmux:
+
+```
+Ctrl+b q
+```
+
+From a shell:
+
+```sh
+tmux source-file ~/.config/tmux/tmux.conf
+```
 
 ## Keybinding Smoke Test
 
@@ -75,7 +98,7 @@ Run this after changing Ghostty or tmux bindings:
 
 It checks the repo config, installed config, and live tmux server bindings. It
 cannot prove macOS delivered a physical keypress, but it catches the common
-breakages: Option not treated as Alt, missing `Ctrl+b` fallback, stale installed
+breakages: Option not treated as Alt, missing `Ctrl+b` prefix, stale installed
 tmux config, and live tmux not loading `Alt+c` / `Alt+p`.
 
 ## Agent

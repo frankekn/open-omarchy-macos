@@ -33,6 +33,5 @@ Key settings to apply:
 
 - The real `yazi` binary is `/opt/homebrew/bin/yazi`.
   `~/.config/kaku/zsh/bin/yazi` is a wrapper — prefer the real binary.
-- `Ctrl+Space` is intercepted by macOS Input Source shortcut by default.
-  Disable in **System Settings → Keyboard → Keyboard Shortcuts → Input Sources**,
-  or use `Ctrl+b` as the tmux prefix.
+- tmux uses `Ctrl+b` as its prefix because `Ctrl+Space` can be intercepted by
+  macOS Input Source shortcuts.
