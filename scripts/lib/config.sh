@@ -16,7 +16,7 @@ config_get() {
   local value
   value=$(grep -E "^[[:space:]]*${key}[[:space:]]*=" "$file" \
     | head -n1 \
-    | sed -E 's/^[^=]+=\s*//' \
+    | sed -E 's/^[^=]+=[[:space:]]*//' \
     | sed -E 's/^"(.*)"/\1/' \
     | sed -E "s/^'(.*)'/\1/" \
     | tr -d '\r')

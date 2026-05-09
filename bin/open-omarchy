@@ -52,7 +52,7 @@ cmd_work() {
   local config_file="${HOME}/.config/open-omarchy-macos/config.toml"
   if [ -f "$config_file" ]; then
     local cfg_session
-    cfg_session=$(grep -E '^session_name\s*=' "$config_file" | head -n1 | sed 's/.*=\s*"\(.*\)".*/\1/' || true)
+    cfg_session=$(grep -E '^session_name[[:space:]]*=' "$config_file" | head -n1 | sed 's/.*=[[:space:]]*"\(.*\)".*/\1/' || true)
     if [ -n "$cfg_session" ]; then
       session_name="$cfg_session"
     fi
