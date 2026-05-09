@@ -212,6 +212,20 @@ preflight() {
   log "Preflight OK."
 }
 
+# ensure_formula <formula>
+# Installs <formula> via Homebrew if `brew list <basename>` reports it absent.
+# `<formula>` may be tap-qualified ("asmvik/formulae/yabai"); the basename is
+# used for the presence check. Idempotent and dry-run aware via run().
+ensure_formula() {
+  local formula="$1"
+  local name="${formula##*/}"
+  if brew list "$name" >/dev/null 2>&1; then
+    log "$name already installed."
+  else
+    run brew install "$formula"
+  fi
+}
+
 # ── Module: desktop ──────────────────────────────────────────────────────────
 
 install_desktop() {
@@ -283,6 +297,11 @@ install_tmux() {
     log "tmux already installed."
   fi
 
+  # fzf and fd back the project picker (Alt+p) used by
+  # open-omarchy-project-window. doctor.sh marks them required.
+  ensure_formula fzf
+  ensure_formula fd
+
   install_file \
     "${REPO_DIR}/modules/tmux/tmux.conf" \
     "${HOME}/.config/tmux/tmux.conf"
@@ -294,6 +313,16 @@ install_tmux() {
   install_bin \
     "${REPO_DIR}/modules/tmux/bin/open-omarchy-project-window" \
     "${HOME}/.local/bin"
+
+  if [ -f "${HOME}/.tmux.conf" ]; then
+    log ""
+    log "WARNING: ${HOME}/.tmux.conf exists and tmux loads it BEFORE"
+    log "         ~/.config/tmux/tmux.conf, so the Omarchy bindings may be"
+    log "         shadowed. Consider:"
+    log "             mv ~/.tmux.conf ~/.tmux.conf.pre-omarchy"
+    log "         (Restore later with: mv ~/.tmux.conf.pre-omarchy ~/.tmux.conf)"
+    log ""
+  fi
 
   log "tmux module installed. Inside tmux, reload with Ctrl+b q."
   log "From a shell: tmux source-file ~/.config/tmux/tmux.conf"

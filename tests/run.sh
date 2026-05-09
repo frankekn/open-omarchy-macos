@@ -409,6 +409,34 @@ test_revert_uninstalls_only_what_install_added() {
   pass "revert uninstalls only what install added"
 }
 
+test_tmux_module_installs_fzf_fd() {
+  new_case "tmux-installs-fzf-fd"
+  run_success ./scripts/install.sh --module tmux
+
+  assert_contains "${FAKE_STATE}/commands.log" "install fzf"
+  assert_contains "${FAKE_STATE}/commands.log" "install fd"
+  pass "tmux module installs fzf and fd"
+}
+
+test_tmux_warns_when_tmux_conf_exists() {
+  new_case "tmux-warn-shadow"
+  write_file "${HOME}/.tmux.conf" "user kaku tmux config"
+
+  run_success ./scripts/install.sh --module tmux
+
+  assert_contains "$LAST_STDERR" "~/.tmux.conf"
+  assert_contains "$LAST_STDERR" "shadowed"
+  pass "tmux module warns when ~/.tmux.conf shadows new config"
+}
+
+test_tmux_no_warn_when_tmux_conf_absent() {
+  new_case "tmux-no-warn"
+  run_success ./scripts/install.sh --module tmux
+
+  assert_not_contains "$LAST_STDERR" "shadowed"
+  pass "tmux module does not warn when ~/.tmux.conf is absent"
+}
+
 trap cleanup EXIT
 
 test_install_dry_run_does_not_write
@@ -421,5 +449,8 @@ test_revert_dry_run_tap_wording
 test_home_with_quote_has_valid_manifest
 test_revert_round_trip_full_install
 test_revert_uninstalls_only_what_install_added
+test_tmux_module_installs_fzf_fd
+test_tmux_warns_when_tmux_conf_exists
+test_tmux_no_warn_when_tmux_conf_absent
 
 echo "All tests passed."
