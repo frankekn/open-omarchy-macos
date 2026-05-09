@@ -137,16 +137,28 @@ check_tmux_config() {
   assert_file_contains "$file" "bind -n M-S-Right swap-window -t +1" "$label has Alt+Shift+Right window move binding"
 }
 
+check_skhd_config() {
+  local file="$1"
+  local label="$2"
+
+  assert_file_contains "$file" "cmd + alt + shift - h : yabai -m window --resize" "$label has cmd+alt+shift+h resize binding"
+  assert_file_contains "$file" "cmd + alt + shift - l : yabai -m window --resize" "$label has cmd+alt+shift+l resize binding"
+  assert_file_contains "$file" "cmd - 1 : yabai -m space --focus 1" "$label has cmd+1 space focus binding"
+  assert_file_contains "$file" "cmd - 9 : yabai -m space --focus 9" "$label has cmd+9 space focus binding"
+}
+
 check_repo() {
   echo "== Repo keybinding config =="
   check_ghostty_config "${REPO_DIR}/modules/terminal/ghostty/config" "repo Ghostty config"
   check_tmux_config "${REPO_DIR}/modules/tmux/tmux.conf" "repo tmux config"
+  check_skhd_config "${REPO_DIR}/modules/desktop/skhd/skhdrc" "repo skhd config"
 }
 
 check_installed() {
   echo "== Installed keybinding config =="
   check_ghostty_config "${HOME}/.config/ghostty/config" "installed Ghostty config"
   check_tmux_config "${HOME}/.config/tmux/tmux.conf" "installed tmux config"
+  check_skhd_config "${HOME}/.config/skhd/skhdrc" "installed skhd config"
 }
 
 check_live_tmux() {
