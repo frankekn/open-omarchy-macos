@@ -463,6 +463,44 @@ test_shell_module_idempotent() {
   pass "shell module install is idempotent"
 }
 
+stub_tmux_for_work_test() {
+  # Tmux stub that logs argv and forces cmd_work into the new-session branch
+  # by failing has-session. attach/switch/new-session succeed.
+  cat > "${BIN_DIR}/tmux" <<'FAKE_TMUX'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "${FAKE_STATE}/tmux-argv.log"
+case "${1:-}" in
+  has-session) exit 1 ;;
+  *) exit 0 ;;
+esac
+FAKE_TMUX
+  chmod +x "${BIN_DIR}/tmux"
+  unset TMUX
+}
+
+test_open_omarchy_work_respects_config_session_name() {
+  new_case "open-omarchy-work-config"
+  stub_tmux_for_work_test
+
+  mkdir -p "${HOME}/.config/open-omarchy-macos"
+  printf '%s\n' 'session_name = "Foo"' > "${HOME}/.config/open-omarchy-macos/config.toml"
+
+  run_success ./bin/open-omarchy work
+
+  assert_contains "${FAKE_STATE}/tmux-argv.log" "new-session -s Foo"
+  pass "open-omarchy work uses session_name from config.toml"
+}
+
+test_open_omarchy_work_defaults_to_work_session() {
+  new_case "open-omarchy-work-default"
+  stub_tmux_for_work_test
+
+  run_success ./bin/open-omarchy work
+
+  assert_contains "${FAKE_STATE}/tmux-argv.log" "new-session -s Work"
+  pass "open-omarchy work defaults to Work session when no config"
+}
+
 test_shell_module_revert_restores_zshrc() {
   new_case "shell-revert-zshrc"
   write_file "${HOME}/.zshrc" "# user's original zshrc"
@@ -496,5 +534,7 @@ test_tmux_no_warn_when_tmux_conf_absent
 test_shell_module_installs_t_alias
 test_shell_module_idempotent
 test_shell_module_revert_restores_zshrc
+test_open_omarchy_work_respects_config_session_name
+test_open_omarchy_work_defaults_to_work_session
 
 echo "All tests passed."

@@ -8,6 +8,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SCRIPTS_DIR="${REPO_DIR}/scripts"
 
+# shellcheck source=scripts/lib/config.sh
+source "${SCRIPTS_DIR}/lib/config.sh"
+
 usage() {
   cat >&2 <<EOF
 Usage: open-omarchy <command> [options]
@@ -46,17 +49,9 @@ cmd_doctor() {
 }
 
 cmd_work() {
-  local session_name="Work"
-
-  # Read session name from config if available
   local config_file="${HOME}/.config/open-omarchy-macos/config.toml"
-  if [ -f "$config_file" ]; then
-    local cfg_session
-    cfg_session=$(grep -E '^session_name[[:space:]]*=' "$config_file" | head -n1 | sed 's/.*=[[:space:]]*"\(.*\)".*/\1/' || true)
-    if [ -n "$cfg_session" ]; then
-      session_name="$cfg_session"
-    fi
-  fi
+  local session_name
+  session_name="$(config_get session_name "$config_file" Work)"
 
   if tmux has-session -t "$session_name" 2>/dev/null; then
     if [ -n "${TMUX:-}" ]; then
