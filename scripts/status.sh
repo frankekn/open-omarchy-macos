@@ -30,6 +30,19 @@ check_service() {
   fi
 }
 
+# Returns 0 (true) if Accessibility appears NOT to be granted to yabai.
+# Strategy: if yabai isn't installed at all, we don't have an opinion
+# (return 1, "no evidence to remind"). Otherwise probe with a query that
+# requires Accessibility — a working window query is positive evidence
+# that the user has granted permissions; a failure or a non-running
+# yabai is treated as "still blocked" so we keep the reminder visible.
+accessibility_blocked() {
+  command -v yabai >/dev/null 2>&1 || return 1
+  pgrep -x yabai >/dev/null 2>&1 || return 0
+  yabai -m query --windows >/dev/null 2>&1 && return 1
+  return 0
+}
+
 main() {
   print_section "System"
   echo "macOS: $(sw_vers -productVersion)"
@@ -79,18 +92,20 @@ main() {
     echo "No backup directory."
   fi
 
-  print_section "Manual Steps Remaining"
-  echo "1. Grant Accessibility permissions to yabai and skhd:"
-  echo "   System Settings → Privacy & Security → Accessibility"
-  echo ""
-  echo "2. Restart services after granting permissions:"
-  echo "   yabai --restart-service"
-  echo "   skhd --restart-service"
-  echo ""
-  echo "3. Recommended macOS settings:"
-  echo "   - Enable 'Displays have separate Spaces'"
-  echo "   - Disable 'Automatically rearrange Spaces based on most recent use'"
-  echo ""
+  if accessibility_blocked; then
+    print_section "Manual Steps Remaining"
+    echo "1. Grant Accessibility permissions to yabai and skhd:"
+    echo "   System Settings → Privacy & Security → Accessibility"
+    echo ""
+    echo "2. Restart services after granting permissions:"
+    echo "   yabai --restart-service"
+    echo "   skhd --restart-service"
+    echo ""
+    echo "3. Recommended macOS settings:"
+    echo "   - Enable 'Displays have separate Spaces'"
+    echo "   - Disable 'Automatically rearrange Spaces based on most recent use'"
+    echo ""
+  fi
 }
 
 main "$@"
