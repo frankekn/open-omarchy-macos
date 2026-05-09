@@ -1,0 +1,7 @@
+# open-omarchy-macos shell helpers.
+# Sourced from ~/.zshrc via the marker block written by install_shell().
+
+# Attach to (or create) the Work tmux session.
+t() {
+  open-omarchy work "$@"
+}

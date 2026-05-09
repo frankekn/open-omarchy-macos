@@ -437,6 +437,47 @@ test_tmux_no_warn_when_tmux_conf_absent() {
   pass "tmux module does not warn when ~/.tmux.conf is absent"
 }
 
+test_shell_module_installs_t_alias() {
+  new_case "shell-installs-t"
+  run_success ./scripts/install.sh --module shell
+
+  assert_file_exists "${HOME}/.config/open-omarchy-macos/shell.zsh"
+  assert_contains    "${HOME}/.config/open-omarchy-macos/shell.zsh" "t() {"
+  assert_file_exists "${HOME}/.local/bin/open-omarchy"
+  assert_file_exists "${HOME}/.zshrc"
+  assert_contains    "${HOME}/.zshrc" "# >>> open-omarchy-macos >>>"
+  assert_contains    "${HOME}/.zshrc" "# <<< open-omarchy-macos <<<"
+  pass "shell module installs t alias and CLI wrapper"
+}
+
+test_shell_module_idempotent() {
+  new_case "shell-idempotent"
+  run_success ./scripts/install.sh --module shell
+  run_success ./scripts/install.sh --module shell
+
+  local marker_count
+  marker_count=$(grep -cF -- "# >>> open-omarchy-macos >>>" "${HOME}/.zshrc")
+  if [ "$marker_count" -ne 1 ]; then
+    fail "expected exactly one marker block in ~/.zshrc, found $marker_count"
+  fi
+  pass "shell module install is idempotent"
+}
+
+test_shell_module_revert_restores_zshrc() {
+  new_case "shell-revert-zshrc"
+  write_file "${HOME}/.zshrc" "# user's original zshrc"
+
+  run_success ./scripts/install.sh --module shell
+
+  # Sanity: install actually appended the marker.
+  assert_contains "${HOME}/.zshrc" "# >>> open-omarchy-macos >>>"
+
+  run_success ./scripts/revert.sh
+
+  assert_file_content "${HOME}/.zshrc" "# user's original zshrc"
+  pass "shell module revert restores original ~/.zshrc"
+}
+
 trap cleanup EXIT
 
 test_install_dry_run_does_not_write
@@ -452,5 +493,8 @@ test_revert_uninstalls_only_what_install_added
 test_tmux_module_installs_fzf_fd
 test_tmux_warns_when_tmux_conf_exists
 test_tmux_no_warn_when_tmux_conf_absent
+test_shell_module_installs_t_alias
+test_shell_module_idempotent
+test_shell_module_revert_restores_zshrc
 
 echo "All tests passed."

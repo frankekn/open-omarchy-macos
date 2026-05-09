@@ -68,6 +68,15 @@ else
 fi
 check_file "${HOME}/.config/ghostty/config" "~/.config/ghostty/config"
 
+section "shell module"
+check_file "${HOME}/.config/open-omarchy-macos/shell.zsh" "~/.config/open-omarchy-macos/shell.zsh"
+check_file "${HOME}/.local/bin/open-omarchy"               "~/.local/bin/open-omarchy"
+if [ -f "${HOME}/.zshrc" ] && grep -Fq -- "# >>> open-omarchy-macos >>>" "${HOME}/.zshrc"; then
+  ok "~/.zshrc sources the open-omarchy shell partial"
+else
+  fail "~/.zshrc missing open-omarchy marker — open-omarchy install --module shell"
+fi
+
 section "Agent"
 agent="$(config_get "agent" "$CONFIG_FILE" "opencode")"
 info "Configured agent: $agent"

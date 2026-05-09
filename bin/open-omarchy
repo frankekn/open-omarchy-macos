@@ -21,7 +21,7 @@ Commands:
   project   Open a project window via fzf picker
 
 Options (install / revert):
-  --module <name>    Target a single module (desktop | tmux | nvim | terminal)
+  --module <name>    Target a single module (desktop | tmux | nvim | terminal | shell)
   --dry-run          Print actions without making changes
 
 Run 'open-omarchy <command> --help' for command-specific help.
