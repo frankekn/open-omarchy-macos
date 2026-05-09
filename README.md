@@ -97,7 +97,7 @@ Check current setup state:
 | `cmd + shift + h/j/k/l` | Swap window west/south/north/east |
 | `cmd + alt + shift + h/j/k/l` | Resize window (grow left/down/up/right by 30px) |
 | `cmd + alt + h/j/k/l` | Focus a different display (west/south/north/east) |
-| `cmd + 1`…`cmd + 9` | Focus Space N |
+| `cmd + ctrl + 1`…`cmd + ctrl + 9` | Focus Space N (cmd+N is left for app tabs) |
 | `cmd + shift + q` | Close focused window |
 | `cmd + f` | Toggle zoom fullscreen |
 | `cmd + shift + space` | Toggle floating |
