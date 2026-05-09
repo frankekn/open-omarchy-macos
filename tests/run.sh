@@ -349,6 +349,66 @@ test_home_with_quote_has_valid_manifest() {
   pass "manifest handles quoted home path"
 }
 
+test_revert_round_trip_full_install() {
+  new_case "revert-roundtrip-full"
+
+  # Pre-populate every module's install destination with sentinel content so
+  # we can verify revert restores all of them (not just yabai/skhd).
+  write_file "${HOME}/.config/yabai/yabairc"  "sentinel yabai"
+  write_file "${HOME}/.config/skhd/skhdrc"    "sentinel skhd"
+  write_file "${HOME}/.config/tmux/tmux.conf" "sentinel tmux"
+  write_file "${HOME}/.config/nvim/init.lua"  "sentinel nvim"
+  write_file "${HOME}/.config/ghostty/config" "sentinel ghostty"
+
+  run_success ./scripts/install.sh
+
+  # Sanity: install actually overwrote them.
+  local current
+  current="$(< "${HOME}/.config/yabai/yabairc")"
+  if [ "$current" = "sentinel yabai" ]; then
+    fail "install did not overwrite yabairc"
+  fi
+
+  # Revert with default backup discovery (no --backup flag).
+  run_success ./scripts/revert.sh
+
+  assert_file_content "${HOME}/.config/yabai/yabairc"  "sentinel yabai"
+  assert_file_content "${HOME}/.config/skhd/skhdrc"    "sentinel skhd"
+  assert_file_content "${HOME}/.config/tmux/tmux.conf" "sentinel tmux"
+  assert_file_content "${HOME}/.config/nvim/init.lua"  "sentinel nvim"
+  assert_file_content "${HOME}/.config/ghostty/config" "sentinel ghostty"
+  pass "revert round-trip restores all module configs"
+}
+
+test_revert_uninstalls_only_what_install_added() {
+  new_case "revert-preserves-preinstalled"
+
+  # Pre-existing yabai + tap; skhd is fresh. Install should record:
+  #   yabai_installed_by_install: false
+  #   skhd_installed_by_install:  true
+  #   tap_added_by_install:       false
+  touch "${FAKE_STATE}/package-yabai"
+  touch "${FAKE_STATE}/tap-asmvik-formulae"
+
+  run_success ./scripts/install.sh
+
+  local manifest
+  manifest="$(latest_manifest)"
+  assert_jq_value "$manifest" '.packages.yabai_installed_by_install' false
+  assert_jq_value "$manifest" '.packages.skhd_installed_by_install'  true
+  assert_jq_value "$manifest" '.homebrew.tap_asmvik_formulae_added_by_install' false
+
+  run_success ./scripts/revert.sh --uninstall-packages --remove-tap
+
+  [ -f "${FAKE_STATE}/package-yabai" ] || fail "revert removed pre-existing yabai package"
+  if [ -f "${FAKE_STATE}/package-skhd" ]; then
+    fail "revert failed to remove install-added skhd package"
+  fi
+  [ -f "${FAKE_STATE}/tap-asmvik-formulae" ] || fail "revert removed pre-existing tap"
+
+  pass "revert uninstalls only what install added"
+}
+
 trap cleanup EXIT
 
 test_install_dry_run_does_not_write
@@ -359,5 +419,7 @@ test_revert_no_backup_error
 test_revert_restores_configs
 test_revert_dry_run_tap_wording
 test_home_with_quote_has_valid_manifest
+test_revert_round_trip_full_install
+test_revert_uninstalls_only_what_install_added
 
 echo "All tests passed."
