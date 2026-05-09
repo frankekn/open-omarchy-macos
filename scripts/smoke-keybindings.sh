@@ -68,7 +68,7 @@ assert_file_contains() {
     return
   fi
 
-  if rg -q --fixed-strings -- "$pattern" "$file"; then
+  if grep -qF -- "$pattern" "$file"; then
     ok "$label"
   else
     fail "$label missing: $pattern"
@@ -85,7 +85,7 @@ assert_file_not_contains() {
     return
   fi
 
-  if rg -q --fixed-strings -- "$pattern" "$file"; then
+  if grep -qF -- "$pattern" "$file"; then
     fail "$label still contains: $pattern"
   else
     ok "$label"
@@ -97,7 +97,7 @@ assert_output_contains() {
   local pattern="$2"
   local label="$3"
 
-  if printf '%s\n' "$output" | rg -q --fixed-strings -- "$pattern"; then
+  if printf '%s\n' "$output" | grep -qF -- "$pattern"; then
     ok "$label"
   else
     fail "$label missing: $pattern"
