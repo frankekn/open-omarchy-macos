@@ -3,7 +3,7 @@
 # Usage: install.sh [--module <name>] [--dry-run]
 # Modules: desktop | tmux | nvim | terminal | all (default)
 
-set -euo pipefail
+set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -77,7 +77,6 @@ install_file() {
   local dest="$2"
   local subdir
   subdir="backup/$(basename "$(dirname "$dest")")"
-
   local existed_before
   existed_before=$(backup_file "$dest" "$subdir")
   local backup_path=""
@@ -97,7 +96,8 @@ install_file() {
 install_bin() {
   local src="$1"
   local dest_dir="$2"
-  local dest="${dest_dir}/$(basename "$src")"
+  local dest
+  dest="${dest_dir}/$(basename "$src")"
 
   local existed_before
   existed_before=$(backup_file "$dest" "backup/bin")
@@ -115,6 +115,10 @@ install_bin() {
 }
 
 write_manifest() {
+  if [ "$MANIFEST_WRITTEN" = true ]; then
+    return 0
+  fi
+
   run mkdir -p "$BACKUP_DIR"
 
   # Build .configs[] from INSTALLED_FILES.
@@ -314,6 +318,10 @@ install_tmux() {
     "${REPO_DIR}/modules/tmux/bin/open-omarchy-project-window" \
     "${HOME}/.local/bin"
 
+  install_bin \
+    "${REPO_DIR}/modules/tmux/bin/open-omarchy-command-palette" \
+    "${HOME}/.local/bin"
+
   if [ -f "${HOME}/.tmux.conf" ]; then
     log ""
     log "WARNING: ${HOME}/.tmux.conf exists and tmux loads it BEFORE"
@@ -427,7 +435,7 @@ WRAPPER
       mkdir -p "$(dirname "$zshrc")"
       {
         printf '\n%s\n' "$SHELL_MARKER_BEGIN"
-        printf '%s\n' '[ -f "$HOME/.config/open-omarchy-macos/shell.zsh" ] && source "$HOME/.config/open-omarchy-macos/shell.zsh"'
+        printf '%s\n' "[ -f \"\$HOME/.config/open-omarchy-macos/shell.zsh\" ] && source \"\$HOME/.config/open-omarchy-macos/shell.zsh\""
         printf '%s\n' "$SHELL_MARKER_END"
       } >> "$zshrc"
     fi

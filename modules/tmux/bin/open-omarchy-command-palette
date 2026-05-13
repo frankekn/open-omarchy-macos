@@ -1,0 +1,484 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_OPEN_OMARCHY_BIN="$(cd "$SCRIPT_DIR/../../.." 2>/dev/null && pwd)/bin/open-omarchy"
+PROJECT_WINDOW_BIN="${HOME}/.local/bin/open-omarchy-project-window"
+DEV_WINDOW_BIN="${HOME}/.local/bin/open-omarchy-dev-window"
+PALETTE_PROMPT="Open Omarchy > "
+
+has_command() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+add_item() {
+  local category="$1"
+  local title="$2"
+  local description="$3"
+  local action="$4"
+
+  printf '%s\t%s\t%s\t%s\n' "$category" "$title" "$description" "$action"
+}
+
+current_path() {
+  tmux display-message -p "#{pane_current_path}" 2>/dev/null || pwd
+}
+
+resolve_open_omarchy() {
+  if command -v open-omarchy >/dev/null 2>&1; then
+    command -v open-omarchy
+    return 0
+  fi
+
+  if [[ -x "${HOME}/.local/bin/open-omarchy" ]]; then
+    printf '%s\n' "${HOME}/.local/bin/open-omarchy"
+    return 0
+  fi
+
+  if [[ -x "$REPO_OPEN_OMARCHY_BIN" ]]; then
+    printf '%s\n' "$REPO_OPEN_OMARCHY_BIN"
+    return 0
+  fi
+
+  return 1
+}
+
+has_git_repo() {
+  git -C "$(current_path)" rev-parse --is-inside-work-tree >/dev/null 2>&1
+}
+
+has_package_json() {
+  [[ -f "$(current_path)/package.json" ]]
+}
+
+has_running_containers() {
+  has_command docker && docker ps --format '{{.Names}}' 2>/dev/null | grep -q .
+}
+
+send_to_pane() {
+  local command_text="$1"
+
+  tmux send-keys C-c C-u "$command_text" Enter
+}
+
+confirm_tmux() {
+  local prompt="$1"
+  local command_text="$2"
+
+  tmux confirm-before -p "$prompt" "$command_text"
+}
+
+add_optional_tool_items() {
+  if resolve_open_omarchy >/dev/null 2>&1; then
+    add_item "Open Omarchy" "Work Session" "attach or switch to configured Work session" "work_session"
+    add_item "Open Omarchy" "Doctor" "run open-omarchy doctor" "open_omarchy_doctor"
+    add_item "Open Omarchy" "Status" "run open-omarchy status" "open_omarchy_status"
+    add_item "Open Omarchy" "Reinstall tmux Module" "refresh installed tmux files" "reinstall_tmux"
+  fi
+
+  add_item "Open Omarchy" "Scratch Window" "new scratch shell window" "scratch_window"
+
+  if has_command open; then
+    add_item "macOS" "Open Current Path in Finder" "open pane directory in Finder" "open_finder"
+    add_item "macOS" "Reveal Current Path in Finder" "select pane directory in Finder" "reveal_finder"
+    add_item "macOS" "Launch Ghostty" "open Ghostty or Terminal fallback" "launch_terminal"
+    add_item "macOS" "Launch Raycast" "open Raycast or Spotlight fallback" "launch_raycast"
+    add_item "macOS" "System Settings" "open macOS System Settings" "system_settings"
+  fi
+
+  if has_command pbcopy; then
+    add_item "macOS" "Copy Current Path" "copy pane path to clipboard" "copy_path"
+  fi
+
+  if has_git_repo; then
+    if has_command lazygit; then
+      add_item "Tools" "LazyGit" "open lazygit in this project" "lazygit"
+    fi
+
+    add_item "Git" "Git Branches" "checkout a local branch" "git_branches"
+  fi
+
+  if has_command gh && has_git_repo; then
+    add_item "GitHub" "GitHub PRs" "open PR picker in browser" "github_prs"
+    add_item "GitHub" "Open Repo in Browser" "open current repository on GitHub" "open_repo_browser"
+  fi
+
+  if has_command jq && has_package_json; then
+    add_item "Project" "NPM Scripts" "run package.json script in pane" "npm_scripts"
+  fi
+
+  if has_command fd || has_command find; then
+    add_item "Project" "Find Files" "open a file in editor" "find_files"
+  fi
+
+  if has_running_containers; then
+    add_item "Docker" "Docker Logs" "tail container logs" "docker_logs"
+  fi
+
+  if has_command btop; then
+    add_item "Tools" "btop" "open process monitor" "btop"
+  elif has_command htop; then
+    add_item "Tools" "htop" "open process monitor" "htop"
+  fi
+
+  if has_command yabai; then
+    add_item "yabai" "Toggle Float" "toggle focused macOS window float" "yabai_toggle_float"
+    add_item "yabai" "Balance Space" "balance current yabai space" "yabai_balance"
+    add_item "yabai" "Focus West" "focus macOS window west" "yabai_focus_west"
+    add_item "yabai" "Focus East" "focus macOS window east" "yabai_focus_east"
+    add_item "yabai" "Window Info" "show focused yabai window JSON" "yabai_window_info"
+  fi
+
+  if has_command yabai && has_command skhd; then
+    add_item "yabai" "Restart Services" "restart yabai and skhd services" "restart_services"
+  fi
+}
+
+palette_items() {
+  add_item "Open Omarchy" "Project Picker" "open project window" "project_picker"
+  add_item "Open Omarchy" "Clone Current Window" "new dev window in current project" "clone_current_window"
+
+  add_item "Panes" "Find Pane" "jump to any pane" "find_pane"
+  add_item "Panes" "Split Horizontal" "top and bottom 50/50" "split_horizontal"
+  add_item "Panes" "Split Vertical" "left and right 50/50" "split_vertical"
+  add_item "Panes" "Next Pane" "focus next pane" "next_pane"
+  add_item "Panes" "Previous Pane" "focus previous pane" "previous_pane"
+  add_item "Panes" "Display Pane Numbers" "show pane numbers" "display_panes"
+  add_item "Panes" "Zoom / Unzoom" "toggle active pane zoom" "zoom_pane"
+  add_item "Panes" "Enter Copy Mode" "scrollback and selection" "copy_mode"
+  add_item "Panes" "Rename Pane" "set active pane title" "rename_pane"
+  add_item "Panes" "Cycle Pane Layout" "next tmux layout" "cycle_layout"
+  add_item "Panes" "Swap Pane Up" "swap with previous pane" "swap_pane_up"
+  add_item "Panes" "Swap Pane Down" "swap with next pane" "swap_pane_down"
+  add_item "Panes" "Break Pane to Window" "move pane into new window" "break_pane"
+  add_item "Panes" "Close Other Panes" "kill all other panes in window" "close_other_panes"
+  add_item "Panes" "Kill Pane" "close active pane" "kill_pane"
+
+  add_item "Windows" "New Shell Window" "new tmux window at current path" "new_shell_window"
+  add_item "Windows" "Next Window" "switch to next window" "next_window"
+  add_item "Windows" "Previous Window" "switch to previous window" "previous_window"
+  add_item "Windows" "Last Window" "switch to last active window" "last_window"
+  add_item "Windows" "Rename Window" "rename current tmux window" "rename_window"
+  add_item "Windows" "Kill Window" "close active window" "kill_window"
+
+  add_item "Sessions" "Choose Session" "tmux session tree" "choose_session"
+  add_item "Sessions" "New Session" "create named session" "new_session"
+  add_item "Sessions" "Rename Session" "rename current tmux session" "rename_session"
+  add_item "Sessions" "Next Session" "switch to next session" "next_session"
+  add_item "Sessions" "Previous Session" "switch to previous session" "previous_session"
+  add_item "Sessions" "Detach" "detach current client" "detach"
+  add_item "Sessions" "Kill Session" "close current session" "kill_session"
+
+  add_item "System" "Reload tmux Config" "source ~/.config/tmux/tmux.conf" "reload_config"
+
+  add_optional_tool_items
+}
+
+select_tabbed_row() {
+  local prompt="$1"
+  local preview="$2"
+  local selected
+
+  if ! selected="$(
+    fzf \
+      --height=100% \
+      --border \
+      --delimiter=$'\t' \
+      --with-nth=1,2,3 \
+      --prompt="$prompt" \
+      --preview="$preview"
+  )"; then
+    return 1
+  fi
+
+  if [[ -z "$selected" ]]; then
+    return 1
+  fi
+
+  printf '%s\n' "$selected"
+}
+
+select_action() {
+  local selected
+
+  if ! selected="$(
+    palette_items |
+      select_tabbed_row "$PALETTE_PROMPT" 'printf "%s\n%s\n\n%s\n" {1} {2} {3}'
+  )"; then
+    return 1
+  fi
+
+  printf '%s\n' "${selected##*$'\t'}"
+}
+
+select_single_value() {
+  local prompt="$1"
+  local preview="${2:-}"
+  local selected
+
+  if [[ -n "$preview" ]]; then
+    selected="$(fzf --height=100% --border --prompt="$prompt" --preview="$preview")" || return 1
+  else
+    selected="$(fzf --height=100% --border --prompt="$prompt")" || return 1
+  fi
+
+  if [[ -z "$selected" ]]; then
+    return 1
+  fi
+
+  printf '%s\n' "$selected"
+}
+
+run_in_path() {
+  local path
+  path="$(current_path)"
+  cd "$path"
+  "$@"
+}
+
+run_and_pause() {
+  "$@"
+  printf '\nPress enter to close...'
+  read -r _
+}
+
+run_open_omarchy() {
+  local bin
+  bin="$(resolve_open_omarchy)" || {
+    echo "open-omarchy not found" >&2
+    return 1
+  }
+
+  run_and_pause "$bin" "$@"
+}
+
+session_name() {
+  local config_file="${HOME}/.config/open-omarchy-macos/config.toml"
+  local configured=""
+
+  if [[ -f "$config_file" ]]; then
+    configured="$(grep -E '^session_name\s*=' "$config_file" | head -n1 | sed 's/.*=\s*"\(.*\)".*/\1/' || true)"
+  fi
+
+  printf '%s\n' "${configured:-Work}"
+}
+
+run_work_session() {
+  local session
+  session="$(session_name)"
+
+  if tmux has-session -t "$session" 2>/dev/null; then
+    tmux switch-client -t "$session"
+  else
+    tmux new-session -d -s "$session"
+    tmux switch-client -t "$session"
+  fi
+}
+
+run_project_picker() {
+  if [[ ! -x "$PROJECT_WINDOW_BIN" ]]; then
+    echo "Missing: $PROJECT_WINDOW_BIN" >&2
+    return 1
+  fi
+
+  "$PROJECT_WINDOW_BIN"
+}
+
+run_clone_current_window() {
+  if [[ ! -x "$DEV_WINDOW_BIN" ]]; then
+    echo "Missing: $DEV_WINDOW_BIN" >&2
+    return 1
+  fi
+
+  "$DEV_WINDOW_BIN"
+}
+
+run_find_pane() {
+  local selected target session window
+
+  selected="$(
+    tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index}	#{session_name}:#{window_index}.#{pane_index}	#{window_name}	#{pane_current_command}	#{pane_current_path}' |
+      select_tabbed_row 'Pane > ' 'printf "%s\n%s\n%s\n" {3} {4} {5}'
+  )" || return 0
+
+  target="${selected%%$'\t'*}"
+  session="${target%%:*}"
+  window="${target%.*}"
+
+  tmux select-pane -t "$target"
+  tmux select-window -t "$window"
+  tmux switch-client -t "$session"
+}
+
+run_find_files() {
+  local path selected safe_path safe_file editor
+
+  path="$(current_path)"
+  editor="${EDITOR:-nvim}"
+
+  if has_command fd; then
+    selected="$(cd "$path" && fd -t f -E .git -E node_modules | select_single_value 'File > ' 'sed -n "1,120p" {} 2>/dev/null')" || return 0
+  else
+    selected="$(cd "$path" && find . -type f -not -path '*/.git/*' -not -path '*/node_modules/*' | sed 's#^\./##' | select_single_value 'File > ' 'sed -n "1,120p" {} 2>/dev/null')" || return 0
+  fi
+
+  printf -v safe_path '%q' "$path"
+  printf -v safe_file '%q' "$selected"
+  send_to_pane "cd $safe_path && $editor $safe_file"
+}
+
+run_git_branches() {
+  local path branch safe_path safe_branch
+
+  path="$(current_path)"
+  branch="$(
+    git -C "$path" branch --format='%(refname:short)' |
+      select_single_value 'Branch > '
+  )" || return 0
+
+  printf -v safe_path '%q' "$path"
+  printf -v safe_branch '%q' "$branch"
+  send_to_pane "cd $safe_path && git checkout $safe_branch"
+}
+
+run_npm_scripts() {
+  local path script safe_path safe_script
+
+  path="$(current_path)"
+  script="$(
+    jq -r '.scripts // {} | keys[]' "$path/package.json" |
+      select_single_value 'npm run > '
+  )" || return 0
+
+  printf -v safe_path '%q' "$path"
+  printf -v safe_script '%q' "$script"
+  send_to_pane "cd $safe_path && npm run $safe_script"
+}
+
+run_docker_logs() {
+  local container
+
+  container="$(
+    docker ps --format '{{.Names}}' |
+      select_single_value 'Container > '
+  )" || return 0
+
+  docker logs -f --tail 100 "$container"
+}
+
+run_open_repo_browser() {
+  local path
+  path="$(current_path)"
+  cd "$path" && gh repo view --web
+}
+
+run_copy_path() {
+  local path
+  path="$(current_path)"
+  printf '%s' "$path" | pbcopy
+  tmux display-message "Copied path: $path"
+}
+
+run_yabai_window_info() {
+  if has_command jq; then
+    yabai -m query --windows --window | jq .
+  else
+    yabai -m query --windows --window
+  fi
+  printf '\nPress enter to close...'
+  read -r _
+}
+
+run_github_prs() {
+  local selected number path
+
+  path="$(current_path)"
+  selected="$(
+    cd "$path" &&
+      gh pr list --limit 40 --json number,title,state,isDraft \
+      --jq '.[] | [.number, (if .isDraft then "DRAFT" else .state end), .title] | @tsv' |
+      select_tabbed_row 'PR > ' 'printf "%s %s\n\n%s\n" {1} {2} {3}'
+  )" || return 0
+
+  number="${selected%%$'\t'*}"
+  cd "$path" && gh pr view "$number" --web
+}
+
+run_action() {
+  local action="$1"
+
+  case "$action" in
+    project_picker)       run_project_picker ;;
+    clone_current_window) run_clone_current_window ;;
+    work_session)         run_work_session ;;
+    scratch_window)       tmux new-window -n scratch -c "#{pane_current_path}" ;;
+    open_omarchy_doctor)  run_open_omarchy doctor ;;
+    open_omarchy_status)  run_open_omarchy status ;;
+    reinstall_tmux)       run_open_omarchy install --module tmux ;;
+    find_pane)            run_find_pane ;;
+    split_horizontal)     tmux split-window -v -p 50 -c "#{pane_current_path}" ;;
+    split_vertical)       tmux split-window -h -p 50 -c "#{pane_current_path}" ;;
+    next_pane)            tmux select-pane -t +1 ;;
+    previous_pane)        tmux select-pane -t -1 ;;
+    display_panes)        tmux display-panes ;;
+    zoom_pane)            tmux resize-pane -Z ;;
+    copy_mode)            tmux copy-mode ;;
+    rename_pane)          tmux command-prompt -I "#{pane_title}" "select-pane -T '%%'" ;;
+    cycle_layout)         tmux next-layout ;;
+    swap_pane_up)         tmux swap-pane -U ;;
+    swap_pane_down)       tmux swap-pane -D ;;
+    break_pane)           tmux break-pane ;;
+    close_other_panes)    confirm_tmux "kill all other panes? (y/n)" "kill-pane -a" ;;
+    kill_pane)            confirm_tmux "kill pane? (y/n)" "kill-pane" ;;
+    new_shell_window)     tmux new-window -c "#{pane_current_path}" ;;
+    next_window)          tmux next-window ;;
+    previous_window)      tmux previous-window ;;
+    last_window)          tmux last-window ;;
+    rename_window)        tmux command-prompt -I "#W" "rename-window -- '%%'" ;;
+    kill_window)          confirm_tmux "kill window? (y/n)" "kill-window" ;;
+    choose_session)       tmux choose-tree -Zs ;;
+    new_session)          tmux command-prompt "new-session -s '%%'" ;;
+    rename_session)       tmux command-prompt -I "#S" "rename-session -- '%%'" ;;
+    next_session)         tmux switch-client -n ;;
+    previous_session)     tmux switch-client -p ;;
+    detach)               tmux detach-client ;;
+    kill_session)         confirm_tmux "kill session #S? (y/n)" "kill-session" ;;
+    reload_config)        tmux source-file ~/.config/tmux/tmux.conf \; display "Configuration reloaded" ;;
+    open_finder)          open "$(current_path)" ;;
+    reveal_finder)        open -R "$(current_path)" ;;
+    copy_path)            run_copy_path ;;
+    launch_terminal)      open -na Ghostty 2>/dev/null || open -na Terminal ;;
+    launch_raycast)       open -na Raycast 2>/dev/null || osascript -e 'tell application "System Events" to keystroke space using command down' ;;
+    system_settings)      open -a "System Settings" ;;
+    lazygit)              run_in_path lazygit ;;
+    btop)                 btop ;;
+    htop)                 htop ;;
+    find_files)           run_find_files ;;
+    git_branches)         run_git_branches ;;
+    npm_scripts)          run_npm_scripts ;;
+    docker_logs)          run_docker_logs ;;
+    github_prs)           run_github_prs ;;
+    open_repo_browser)    run_open_repo_browser ;;
+    yabai_toggle_float)   yabai -m window --toggle float ;;
+    yabai_balance)        yabai -m space --balance ;;
+    yabai_focus_west)     yabai -m window --focus west ;;
+    yabai_focus_east)     yabai -m window --focus east ;;
+    yabai_window_info)    run_yabai_window_info ;;
+    restart_services)     yabai --restart-service && skhd --restart-service ;;
+    *)                    echo "Unknown action: $action" >&2; return 1 ;;
+  esac
+}
+
+main() {
+  local action
+
+  if [[ "${1:-}" == "--list" ]]; then
+    palette_items
+    return 0
+  fi
+
+  action="$(select_action)" || exit 0
+  run_action "$action"
+}
+
+main "$@"

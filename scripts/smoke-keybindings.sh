@@ -129,6 +129,7 @@ check_tmux_config() {
   assert_file_contains "$file" "set -g prefix C-b" "$label has Ctrl+b prefix"
   assert_file_contains "$file" "set -g prefix2 None" "$label disables secondary prefix"
   assert_file_contains "$file" "unbind -q C-Space" "$label unbinds Ctrl+Space prefix"
+  assert_file_contains "$file" "bind -n M-a display-popup" "$label has Alt+a command palette binding"
   assert_file_contains "$file" "bind -n M-c run-shell" "$label has Alt+c dev-window binding"
   assert_file_contains "$file" "bind -n M-p display-popup" "$label has Alt+p project picker binding"
   assert_file_contains "$file" "bind -n M-s split-window -v -p 50" "$label has Alt+s 50/50 horizontal split"
@@ -176,6 +177,8 @@ check_live_tmux() {
 
   local root_keys
   root_keys="$(tmux list-keys -T root 2>/dev/null)"
+  assert_output_contains "$root_keys" "M-a" "live tmux has Alt+a binding"
+  assert_output_contains "$root_keys" "open-omarchy-command-palette" "live tmux Alt+a calls command palette"
   assert_output_contains "$root_keys" "M-c" "live tmux has Alt+c binding"
   assert_output_contains "$root_keys" "open-omarchy-dev-window" "live tmux Alt+c calls dev-window"
   assert_output_contains "$root_keys" "M-p" "live tmux has Alt+p binding"

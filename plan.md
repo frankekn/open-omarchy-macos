@@ -33,15 +33,15 @@ Omarchy but Mac-native, agent-aware, and fully modular.
 
 | # | Phase              | Status  |
 |---|--------------------|---------|
-| 1 | Repo restructure   | pending |
-| 2 | Config model       | pending |
-| 3 | Workspace CLI      | pending |
-| 4 | tmux module        | pending |
-| 5 | Neovim module      | pending |
-| 6 | Terminal module    | pending |
-| 7 | Installer/revert   | pending |
-| 8 | Doctor/status      | pending |
-| 9 | Portability        | pending |
+| 1 | Repo restructure   | done |
+| 2 | Config model       | done |
+| 3 | Workspace CLI      | done |
+| 4 | tmux module        | done |
+| 5 | Neovim module      | done |
+| 6 | Terminal module    | done |
+| 7 | Installer/revert   | partial |
+| 8 | Doctor/status      | done |
+| 9 | Portability        | done |
 
 ## Acceptance Criteria
 
@@ -49,6 +49,7 @@ Omarchy but Mac-native, agent-aware, and fully modular.
 - User can configure agent (opencode / codex / claude)
 - `Alt+p` opens project picker via fzf in a tmux popup
 - `Alt+c` clones current project layout to a new window
+- `Alt+a` opens the Open Omarchy command palette
 - New project window opens nvim + agent pane side by side
 - Bottom shell pane is optional, toggled on demand (`Alt+s`)
 - Active pane focus is visually distinct
@@ -78,12 +79,13 @@ Omarchy but Mac-native, agent-aware, and fully modular.
 - `~/.config/kaku/zsh/bin/yazi` is a wrapper; real binary is `/opt/homebrew/bin/yazi`
 - `Ctrl+Space` is intercepted by macOS input source shortcut — not usable as tmux prefix
 
-## Relevant Files (live dotfiles, not in repo yet)
+## Installed Files
 
 - `~/.config/tmux/tmux.conf` — Omarchy-style tmux config
 - `~/.config/nvim/init.lua` — Neovim config with Neo-tree via vim.pack
 - `~/.config/ghostty/config` — Ghostty stable config
 - `~/.config/kaku/kaku.lua` — Kaku (WezTerm-based) config
-- `~/.local/bin/tmux-dev-window` — creates 2-pane project layout
-- `~/.local/bin/tmux-project-window` — fzf project picker → dev window
-- `~/.zshrc` — `t()` entry point, `_tmux_build_dev_layout`, shell integration
+- `~/.local/bin/open-omarchy` — CLI entrypoint
+- `~/.local/bin/open-omarchy-dev-window` — creates 2-pane project layout
+- `~/.local/bin/open-omarchy-project-window` — fzf project picker → dev window
+- `~/.local/bin/open-omarchy-command-palette` — `Alt+a` command surface
