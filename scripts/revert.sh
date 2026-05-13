@@ -46,12 +46,6 @@ find_latest_manifest() {
   echo "$latest"
 }
 
-parse_manifest() {
-  local manifest="$1"
-  local field="$2"
-  jq -r "$field" "$manifest"
-}
-
 stop_services() {
   log "Stopping services..."
 
@@ -112,8 +106,8 @@ uninstall_packages() {
   log "Uninstalling packages (if installed by this install)..."
 
   local yabai_installed skhd_installed
-  yabai_installed=$(jq -r '.packages.yabai_installed_by_install' "$manifest")
-  skhd_installed=$(jq -r '.packages.skhd_installed_by_install' "$manifest")
+  yabai_installed=$(jq -r '.packages.yabai_installed_by_install // false' "$manifest")
+  skhd_installed=$(jq -r '.packages.skhd_installed_by_install // false' "$manifest")
 
   if [ "$yabai_installed" = "true" ] && brew list yabai >/dev/null 2>&1; then
     run brew uninstall yabai
@@ -136,7 +130,7 @@ remove_tap() {
   log "Removing tap (if added by this install)..."
 
   local tap_added
-  tap_added=$(jq -r '.homebrew.tap_asmvik_formulae_added_by_install' "$manifest")
+  tap_added=$(jq -r '.homebrew.tap_asmvik_formulae_added_by_install // false' "$manifest")
 
   if [ "$tap_added" = "true" ]; then
     if [ "$DRY_RUN" = true ]; then
@@ -156,8 +150,8 @@ restore_service_state() {
   log "Restoring previous service state..."
 
   local yabai_was_running skhd_was_running
-  yabai_was_running=$(jq -r '.services.yabai_was_running_before' "$manifest")
-  skhd_was_running=$(jq -r '.services.skhd_was_running_before' "$manifest")
+  yabai_was_running=$(jq -r '.services.yabai_was_running_before // false' "$manifest")
+  skhd_was_running=$(jq -r '.services.skhd_was_running_before // false' "$manifest")
 
   if [ "$yabai_was_running" = "true" ]; then
     if command -v yabai >/dev/null 2>&1; then

@@ -15,7 +15,14 @@ print_section() {
 
 check_command() {
   if command -v "$1" >/dev/null 2>&1; then
-    echo "installed ($($1 --version 2>&1 | head -n1))"
+    case "$1" in
+      tmux)
+        echo "installed ($(tmux -V 2>&1 | head -n1))"
+        ;;
+      *)
+        echo "installed ($($1 --version 2>&1 | head -n1))"
+        ;;
+    esac
   else
     echo "not installed"
   fi
@@ -43,6 +50,17 @@ accessibility_blocked() {
   return 0
 }
 
+check_file_status() {
+  local label="$1"
+  local path="$2"
+
+  if [ -f "$path" ]; then
+    echo "${label}: installed (${path})"
+  else
+    echo "${label}: missing (${path})"
+  fi
+}
+
 main() {
   print_section "System"
   echo "macOS: $(sw_vers -productVersion)"
@@ -63,21 +81,26 @@ main() {
   print_section "Packages"
   echo "yabai: $(check_command yabai)"
   echo "skhd:  $(check_command skhd)"
+  echo "tmux:  $(check_command tmux)"
+  echo "nvim:  $(check_command nvim)"
+  echo "fzf:   $(check_command fzf)"
+  echo "fd:    $(check_command fd)"
+  echo "git:   $(check_command git)"
 
   print_section "Services"
   echo "yabai: $(check_service yabai)"
   echo "skhd:  $(check_service skhd)"
 
   print_section "Config Files"
-  for f in \
-    "${HOME}/.config/yabai/yabairc" \
-    "${HOME}/.config/skhd/skhdrc" \
-    "${HOME}/.yabairc" \
-    "${HOME}/.skhdrc"; do
-    if [ -f "$f" ]; then
-      echo "$(basename "$f"): ${f}"
-    fi
-  done
+  check_file_status "open-omarchy CLI" "${HOME}/.local/bin/open-omarchy"
+  check_file_status "yabai config" "${HOME}/.config/yabai/yabairc"
+  check_file_status "skhd config" "${HOME}/.config/skhd/skhdrc"
+  check_file_status "tmux config" "${HOME}/.config/tmux/tmux.conf"
+  check_file_status "tmux dev window" "${HOME}/.local/bin/open-omarchy-dev-window"
+  check_file_status "tmux project picker" "${HOME}/.local/bin/open-omarchy-project-window"
+  check_file_status "tmux command palette" "${HOME}/.local/bin/open-omarchy-command-palette"
+  check_file_status "nvim config" "${HOME}/.config/nvim/init.lua"
+  check_file_status "Ghostty config" "${HOME}/.config/ghostty/config"
 
   print_section "Backups"
   if [ -d "${STATE_DIR}/backups" ]; then

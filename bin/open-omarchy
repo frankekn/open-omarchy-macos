@@ -6,6 +6,19 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [ ! -d "${REPO_DIR}/scripts" ]; then
+  REPO_POINTER="${HOME}/.config/open-omarchy-macos/repo-path"
+  if [ -f "$REPO_POINTER" ]; then
+    REPO_DIR="$(cat "$REPO_POINTER")"
+  fi
+fi
+
+if [ ! -d "${REPO_DIR}/scripts" ]; then
+  echo "[open-omarchy] ERROR: repo scripts not found." >&2
+  echo "[open-omarchy] Reinstall from the repo, or set ${HOME}/.config/open-omarchy-macos/repo-path." >&2
+  exit 1
+fi
+
 SCRIPTS_DIR="${REPO_DIR}/scripts"
 
 # shellcheck source=scripts/lib/config.sh
@@ -22,9 +35,10 @@ Commands:
   doctor    Check dependencies and config validity
   work      Attach to (or create) the Work tmux session
   project   Open a project window via fzf picker
+  palette   Open the tmux command palette
 
-Options (install / revert):
-  --module <name>    Target a single module (desktop | tmux | nvim | terminal | shell)
+Options:
+  install --module <name>    Target module (desktop | tmux | nvim | terminal | shell)
   --dry-run          Print actions without making changes
 
 Run 'open-omarchy <command> --help' for command-specific help.
@@ -80,6 +94,18 @@ cmd_project() {
   fi
 }
 
+cmd_palette() {
+  local palette_bin="${HOME}/.local/bin/open-omarchy-command-palette"
+
+  if [ -x "$palette_bin" ]; then
+    exec "$palette_bin" "$@"
+  else
+    echo "[open-omarchy] open-omarchy-command-palette not found." >&2
+    echo "Run: open-omarchy install --module tmux" >&2
+    exit 1
+  fi
+}
+
 [ $# -eq 0 ] && usage
 
 COMMAND="$1"
@@ -92,6 +118,7 @@ case "$COMMAND" in
   doctor)   cmd_doctor   "$@" ;;
   work)     cmd_work     "$@" ;;
   project)  cmd_project  "$@" ;;
+  palette)  cmd_palette  "$@" ;;
   -h|--help|help) usage ;;
   *) echo "[open-omarchy] Unknown command: $COMMAND" >&2; usage ;;
 esac

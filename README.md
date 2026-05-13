@@ -103,10 +103,25 @@ Check current setup state:
 | `cmd + shift + space` | Toggle floating |
 | `fn + click-drag` | Move/resize windows with mouse |
 
+Inside tmux:
+
+| Binding | Action |
+|---------|--------|
+| `Alt + a` | Open command palette |
+| `Alt + p` | Open project picker |
+| `Alt + c` | Clone current project window |
+| `Alt + s` | Split top/bottom 50/50 |
+| `Alt + v` | Split left/right 50/50 |
+
 ## Config Files
 
+- `bin/open-omarchy` → installed to `~/.local/bin/open-omarchy`
 - `modules/desktop/yabai/yabairc` → installed to `~/.config/yabai/yabairc`
 - `modules/desktop/skhd/skhdrc` → installed to `~/.config/skhd/skhdrc`
+- `modules/tmux/tmux.conf` → installed to `~/.config/tmux/tmux.conf`
+- `modules/tmux/bin/*` → installed to `~/.local/bin/`
+- `modules/nvim/init.lua` → installed to `~/.config/nvim/init.lua`
+- `modules/terminal/ghostty/config` → installed to `~/.config/ghostty/config`
 
 Edit these after install to customize behavior.
 
@@ -132,6 +147,8 @@ open-omarchy-macos/
       yabai/yabairc
       skhd/skhdrc
     tmux/
+      tmux.conf
+      bin/open-omarchy-command-palette
     nvim/
     terminal/
   scripts/

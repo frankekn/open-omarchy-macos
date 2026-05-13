@@ -46,6 +46,9 @@ check_bin "git"      "xcode-select --install"
 check_bin "jq"       "brew install jq"
 check_bin "brew"     "https://brew.sh"
 
+section "CLI"
+check_file "${HOME}/.local/bin/open-omarchy" "$HOME/.local/bin/open-omarchy"
+
 section "Desktop module (yabai / skhd)"
 check_bin "yabai"    "open-omarchy install --module desktop"
 check_bin "skhd"     "open-omarchy install --module desktop"
@@ -56,6 +59,7 @@ section "tmux module"
 check_file "${HOME}/.config/tmux/tmux.conf"                 "~/.config/tmux/tmux.conf"
 check_file "${HOME}/.local/bin/open-omarchy-dev-window"     "~/.local/bin/open-omarchy-dev-window"
 check_file "${HOME}/.local/bin/open-omarchy-project-window" "~/.local/bin/open-omarchy-project-window"
+check_file "${HOME}/.local/bin/open-omarchy-command-palette" "$HOME/.local/bin/open-omarchy-command-palette"
 
 section "nvim module"
 check_file "${HOME}/.config/nvim/init.lua" "~/.config/nvim/init.lua"

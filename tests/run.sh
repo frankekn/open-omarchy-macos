@@ -257,8 +257,9 @@ test_install_writes_valid_manifest() {
   assert_file_exists "${HOME}/.config/skhd/skhdrc"
   assert_file_exists "${FAKE_STATE}/running-yabai"
   assert_file_exists "${FAKE_STATE}/running-skhd"
+  assert_jq_value "$manifest" '.schema_version' 1
   assert_jq_value "$manifest" '.homebrew.tap_asmvik_formulae_added_by_install' true
-  assert_jq_value "$manifest" '.configs[0].created_by_install' true
+  assert_jq_value "$manifest" ".configs[] | select(.path == \"${HOME}/.local/bin/open-omarchy\") | .created_by_install" true
   pass "install writes valid manifest"
 }
 
@@ -271,13 +272,13 @@ test_existing_configs_are_backed_up() {
 
   local manifest yabai_backup skhd_backup
   manifest="$(latest_manifest)"
-  yabai_backup="$(jq -r '.configs[0].backup_path' "$manifest")"
-  skhd_backup="$(jq -r '.configs[1].backup_path' "$manifest")"
+  yabai_backup="$(jq -r --arg path "${HOME}/.config/yabai/yabairc" '.configs[] | select(.path == $path) | .backup_path' "$manifest")"
+  skhd_backup="$(jq -r --arg path "${HOME}/.config/skhd/skhdrc" '.configs[] | select(.path == $path) | .backup_path' "$manifest")"
 
   assert_file_content "$yabai_backup" "original yabai"
   assert_file_content "$skhd_backup" "original skhd"
-  assert_jq_value "$manifest" '.configs[0].existed_before' true
-  assert_jq_value "$manifest" '.configs[1].existed_before' true
+  assert_jq_value "$manifest" ".configs[] | select(.path == \"${HOME}/.config/yabai/yabairc\") | .existed_before" true
+  assert_jq_value "$manifest" ".configs[] | select(.path == \"${HOME}/.config/skhd/skhdrc\") | .existed_before" true
   pass "existing configs are backed up"
 }
 
@@ -318,6 +319,22 @@ test_revert_restores_configs() {
   pass "revert restores configs"
 }
 
+test_revert_deletes_created_files_when_requested() {
+  new_case "revert-delete-created"
+  run_success ./scripts/install.sh
+
+  local manifest
+  manifest="$(latest_manifest)"
+  run_success ./scripts/revert.sh --backup "$manifest" --delete-created
+
+  assert_file_not_exists "${HOME}/.local/bin/open-omarchy"
+  assert_file_not_exists "${HOME}/.config/yabai/yabairc"
+  assert_file_not_exists "${HOME}/.config/skhd/skhdrc"
+  assert_file_not_exists "${HOME}/.config/tmux/tmux.conf"
+  assert_file_not_exists "${HOME}/.local/bin/open-omarchy-command-palette"
+  pass "revert deletes created files when requested"
+}
+
 test_revert_dry_run_tap_wording() {
   new_case "revert-dry-run-tap"
   run_success ./scripts/install.sh
@@ -345,7 +362,9 @@ test_home_with_quote_has_valid_manifest() {
   manifest="$(latest_manifest)"
   assert_file_exists "$manifest"
   jq empty "$manifest"
-  assert_jq_value "$manifest" '.configs[0].path' "${HOME}/.config/yabai/yabairc"
+  local actual
+  actual="$(jq -r --arg path "${HOME}/.config/yabai/yabairc" '.configs[] | select(.path == $path) | .path' "$manifest")"
+  [ "$actual" = "${HOME}/.config/yabai/yabairc" ] || fail "manifest did not preserve quoted home path"
   pass "manifest handles quoted home path"
 }
 
@@ -415,6 +434,7 @@ test_tmux_module_installs_fzf_fd() {
 
   assert_contains "${FAKE_STATE}/commands.log" "install fzf"
   assert_contains "${FAKE_STATE}/commands.log" "install fd"
+  assert_file_exists "${HOME}/.local/bin/open-omarchy-command-palette"
   pass "tmux module installs fzf and fd"
 }
 
@@ -524,6 +544,7 @@ test_existing_configs_are_backed_up
 test_service_failure_leaves_manifest
 test_revert_no_backup_error
 test_revert_restores_configs
+test_revert_deletes_created_files_when_requested
 test_revert_dry_run_tap_wording
 test_home_with_quote_has_valid_manifest
 test_revert_round_trip_full_install

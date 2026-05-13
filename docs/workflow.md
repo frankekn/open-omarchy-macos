@@ -34,6 +34,24 @@ directory to open a new tmux window with the standard dev layout.
 Alt+p   → fzf project picker → new window (nvim + agent)
 ```
 
+## Command Palette
+
+`Alt+a` — opens a repo-native command palette for common tmux and project
+actions.
+
+```
+Alt+a   → command palette
+```
+
+The palette is intentionally local and shell-based. It uses `fzf`, `tmux`, and
+the existing Open Omarchy helper scripts instead of installing a third-party
+plugin.
+
+It includes pane/window/session actions, Open Omarchy workflow actions, macOS
+helpers, yabai/skhd utilities, and context-aware project tools such as file
+search, git branch checkout, npm scripts, Docker logs, GitHub PRs, and process
+monitors when those commands are available.
+
 ## Cloning the Current Layout
 
 `Alt+c` — duplicates the current window's layout into a new window pointing at
@@ -99,7 +117,7 @@ Run this after changing Ghostty or tmux bindings:
 It checks the repo config, installed config, and live tmux server bindings. It
 cannot prove macOS delivered a physical keypress, but it catches the common
 breakages: Option not treated as Alt, missing `Ctrl+b` prefix, stale installed
-tmux config, and live tmux not loading `Alt+c` / `Alt+p`.
+tmux config, and live tmux not loading `Alt+a` / `Alt+c` / `Alt+p`.
 
 ## Agent
 
