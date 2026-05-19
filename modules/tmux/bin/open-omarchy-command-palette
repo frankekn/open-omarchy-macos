@@ -16,8 +16,38 @@ add_item() {
   local title="$2"
   local description="$3"
   local action="$4"
+  local key
 
-  printf '%s\t%s\t%s\t%s\n' "$category" "$title" "$description" "$action"
+  key="$(key_for_action "$action")"
+
+  printf '%s\t%s\t%s\t%s\t%s\n' "$category" "$title" "$key" "$description" "$action"
+}
+
+key_for_action() {
+  case "$1" in
+    project_picker)       printf 'Alt+p\n' ;;
+    clone_current_window) printf 'Alt+c / Prefix c\n' ;;
+    split_horizontal)     printf 'Alt+s / Prefix h\n' ;;
+    split_vertical)       printf 'Alt+v / Prefix v\n' ;;
+    kill_pane)            printf 'Prefix x\n' ;;
+    copy_mode)            printf 'Prefix [\n' ;;
+    reload_config)        printf 'Prefix q\n' ;;
+    next_window)          printf 'Alt+Right\n' ;;
+    previous_window)      printf 'Alt+Left\n' ;;
+    rename_window)        printf 'Prefix r\n' ;;
+    kill_window)          printf 'Prefix k\n' ;;
+    new_session)          printf 'Prefix C\n' ;;
+    rename_session)       printf 'Prefix R\n' ;;
+    next_session)         printf 'Alt+Down / Prefix N\n' ;;
+    previous_session)     printf 'Alt+Up / Prefix P\n' ;;
+    kill_session)         printf 'Prefix K\n' ;;
+    launch_terminal)      printf 'Cmd+Return\n' ;;
+    launch_raycast)       printf 'Cmd+Space\n' ;;
+    yabai_toggle_float)   printf 'Cmd+Shift+Space\n' ;;
+    yabai_focus_west)     printf 'Cmd+h\n' ;;
+    yabai_focus_east)     printf 'Cmd+l\n' ;;
+    *)                    printf '%s\n' '-' ;;
+  esac
 }
 
 current_path() {
@@ -109,6 +139,17 @@ add_optional_tool_items() {
 
   if has_command fd || has_command find; then
     add_item "Project" "Find Files" "open a file in editor" "find_files"
+  fi
+
+  if has_command nvim; then
+    add_item "Neovim" "Open Here" "open current pane directory in nvim" "nvim_here"
+    add_item "Neovim" "Find File" "pick a file and open it in nvim" "nvim_find_file"
+    add_item "Neovim" "Edit Config" "open ~/.config/nvim/init.lua" "nvim_config"
+    add_item "Neovim" "Health Check" "open :checkhealth in current project" "nvim_checkhealth"
+  fi
+
+  if has_command nvim && resolve_open_omarchy >/dev/null 2>&1; then
+    add_item "Neovim" "Reinstall nvim Module" "refresh installed Neovim config" "reinstall_nvim"
   fi
 
   if has_running_containers; then
@@ -203,7 +244,13 @@ select_action() {
 
   if ! selected="$(
     palette_items |
-      select_tabbed_row "$PALETTE_PROMPT" 'printf "%s\n%s\n\n%s\n" {1} {2} {3}'
+      fzf \
+        --height=100% \
+        --border \
+        --delimiter=$'\t' \
+        --with-nth=1,2,3,4 \
+        --prompt="$PALETTE_PROMPT" \
+        --preview='printf "%s\n%s\nKey: %s\n\n%s\n" {1} {2} {3} {4}'
   )"; then
     return 1
   fi
@@ -311,20 +358,55 @@ run_find_pane() {
 }
 
 run_find_files() {
-  local path selected safe_path safe_file editor
+  run_file_picker_with_editor "${EDITOR:-nvim}" 'File > '
+}
+
+run_file_picker_with_editor() {
+  local editor="$1"
+  local prompt="$2"
+  local path selected safe_path safe_file
 
   path="$(current_path)"
-  editor="${EDITOR:-nvim}"
 
   if has_command fd; then
-    selected="$(cd "$path" && fd -t f -E .git -E node_modules | select_single_value 'File > ' 'sed -n "1,120p" {} 2>/dev/null')" || return 0
+    selected="$(cd "$path" && fd -t f -E .git -E node_modules | select_single_value "$prompt" 'sed -n "1,120p" {} 2>/dev/null')" || return 0
   else
-    selected="$(cd "$path" && find . -type f -not -path '*/.git/*' -not -path '*/node_modules/*' | sed 's#^\./##' | select_single_value 'File > ' 'sed -n "1,120p" {} 2>/dev/null')" || return 0
+    selected="$(cd "$path" && find . -type f -not -path '*/.git/*' -not -path '*/node_modules/*' | sed 's#^\./##' | select_single_value "$prompt" 'sed -n "1,120p" {} 2>/dev/null')" || return 0
   fi
 
   printf -v safe_path '%q' "$path"
   printf -v safe_file '%q' "$selected"
   send_to_pane "cd $safe_path && $editor $safe_file"
+}
+
+run_nvim_here() {
+  local path safe_path
+
+  path="$(current_path)"
+  printf -v safe_path '%q' "$path"
+  send_to_pane "cd $safe_path && nvim ."
+}
+
+run_nvim_find_file() {
+  run_file_picker_with_editor nvim 'nvim file > '
+}
+
+run_nvim_config() {
+  local config_dir config safe_config
+
+  config_dir="${HOME}/.config/nvim"
+  config="${config_dir}/init.lua"
+  mkdir -p "$config_dir"
+  printf -v safe_config '%q' "$config"
+  send_to_pane "nvim $safe_config"
+}
+
+run_nvim_checkhealth() {
+  local path safe_path
+
+  path="$(current_path)"
+  printf -v safe_path '%q' "$path"
+  send_to_pane "cd $safe_path && nvim +checkhealth"
 }
 
 run_git_branches() {
@@ -415,6 +497,7 @@ run_action() {
     open_omarchy_doctor)  run_open_omarchy doctor ;;
     open_omarchy_status)  run_open_omarchy status ;;
     reinstall_tmux)       run_open_omarchy install --module tmux ;;
+    reinstall_nvim)       run_open_omarchy install --module nvim ;;
     find_pane)            run_find_pane ;;
     split_horizontal)     tmux split-window -v -p 50 -c "#{pane_current_path}" ;;
     split_vertical)       tmux split-window -h -p 50 -c "#{pane_current_path}" ;;
@@ -454,6 +537,10 @@ run_action() {
     btop)                 btop ;;
     htop)                 htop ;;
     find_files)           run_find_files ;;
+    nvim_here)            run_nvim_here ;;
+    nvim_find_file)       run_nvim_find_file ;;
+    nvim_config)          run_nvim_config ;;
+    nvim_checkhealth)     run_nvim_checkhealth ;;
     git_branches)         run_git_branches ;;
     npm_scripts)          run_npm_scripts ;;
     docker_logs)          run_docker_logs ;;

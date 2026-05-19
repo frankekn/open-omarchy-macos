@@ -440,11 +440,13 @@ test_tmux_module_installs_fzf_fd() {
 
 test_tmux_warns_when_tmux_conf_exists() {
   new_case "tmux-warn-shadow"
+  local tmux_conf_hint
+  tmux_conf_hint="$(printf '%s%s' '~' '/.tmux.conf')"
   write_file "${HOME}/.tmux.conf" "user kaku tmux config"
 
   run_success ./scripts/install.sh --module tmux
 
-  assert_contains "$LAST_STDERR" "~/.tmux.conf"
+  assert_contains "$LAST_STDERR" "$tmux_conf_hint"
   assert_contains "$LAST_STDERR" "shadowed"
   pass "tmux module warns when ~/.tmux.conf shadows new config"
 }
@@ -455,6 +457,60 @@ test_tmux_no_warn_when_tmux_conf_absent() {
 
   assert_not_contains "$LAST_STDERR" "shadowed"
   pass "tmux module does not warn when ~/.tmux.conf is absent"
+}
+
+test_command_palette_lists_keys_and_nvim_actions() {
+  new_case "palette-keys-nvim"
+  cat > "${BIN_DIR}/nvim" <<'FAKE_NVIM'
+#!/usr/bin/env bash
+set -euo pipefail
+exit 0
+FAKE_NVIM
+  chmod +x "${BIN_DIR}/nvim"
+
+  run_success ./modules/tmux/bin/open-omarchy-command-palette --list
+
+  assert_contains "$LAST_STDOUT" "$(printf 'Open Omarchy\tProject Picker\tAlt+p\topen project window\tproject_picker')"
+  assert_contains "$LAST_STDOUT" "$(printf 'Panes\tSplit Horizontal\tAlt+s / Prefix h\ttop and bottom 50/50\tsplit_horizontal')"
+  assert_contains "$LAST_STDOUT" "$(printf 'Sessions\tKill Session\tPrefix K\tclose current session\tkill_session')"
+  assert_contains "$LAST_STDOUT" "$(printf 'Neovim\tOpen Here\t-\topen current pane directory in nvim\tnvim_here')"
+  assert_contains "$LAST_STDOUT" "$(printf 'Neovim\tFind File\t-\tpick a file and open it in nvim\tnvim_find_file')"
+  pass "command palette lists key bindings and Neovim actions"
+}
+
+test_command_palette_runs_nvim_config_action() {
+  new_case "palette-nvim-config-action"
+  cat > "${BIN_DIR}/nvim" <<'FAKE_NVIM'
+#!/usr/bin/env bash
+set -euo pipefail
+exit 0
+FAKE_NVIM
+  cat > "${BIN_DIR}/fzf" <<'FAKE_FZF'
+#!/usr/bin/env bash
+set -euo pipefail
+cat >/dev/null
+printf '%s\n' "$FAKE_FZF_SELECTION"
+FAKE_FZF
+  cat > "${BIN_DIR}/tmux" <<'FAKE_TMUX'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "${FAKE_STATE}/tmux.log"
+case "${1:-}" in
+  display-message)
+    printf '%s\n' "$FAKE_TMUX_PATH"
+    ;;
+esac
+FAKE_TMUX
+  chmod +x "${BIN_DIR}/nvim" "${BIN_DIR}/fzf" "${BIN_DIR}/tmux"
+  export FAKE_FZF_SELECTION FAKE_TMUX_PATH
+  FAKE_FZF_SELECTION="$(printf 'Neovim\tEdit Config\t-\topen ~/.config/nvim/init.lua\tnvim_config')"
+  FAKE_TMUX_PATH="$REPO_DIR"
+
+  run_success ./modules/tmux/bin/open-omarchy-command-palette
+
+  [ -d "${HOME}/.config/nvim" ] || fail "expected nvim config directory to exist"
+  assert_contains "${FAKE_STATE}/tmux.log" "nvim ${HOME}/.config/nvim/init.lua"
+  pass "command palette creates nvim config directory before editing config"
 }
 
 test_shell_module_installs_t_alias() {
@@ -552,6 +608,8 @@ test_revert_uninstalls_only_what_install_added
 test_tmux_module_installs_fzf_fd
 test_tmux_warns_when_tmux_conf_exists
 test_tmux_no_warn_when_tmux_conf_absent
+test_command_palette_lists_keys_and_nvim_actions
+test_command_palette_runs_nvim_config_action
 test_shell_module_installs_t_alias
 test_shell_module_idempotent
 test_shell_module_revert_restores_zshrc
