@@ -93,7 +93,7 @@ Check current setup state:
 |---------|--------|
 | `cmd + return` | Open terminal (Ghostty → Terminal fallback) |
 | `cmd + space` | Open launcher (Raycast → Spotlight fallback) |
-| `cmd + h/j/k/l` | Focus west/south/north/east |
+| `Caps + h/j/k/l` | Focus west/south/north/east via Karabiner → F13/F14/F15/F16 |
 | `cmd + shift + h/j/k/l` | Swap window west/south/north/east |
 | `cmd + alt + shift + h/j/k/l` | Resize window (grow left/down/up/right by 30px) |
 | `cmd + alt + h/j/k/l` | Focus a different display (west/south/north/east) |
@@ -102,6 +102,11 @@ Check current setup state:
 | `cmd + f` | Toggle zoom fullscreen |
 | `cmd + shift + space` | Toggle floating |
 | `fn + click-drag` | Move/resize windows with mouse |
+
+The desktop focus layer avoids `cmd + h/j/k/l` because `cmd+h` is a native
+macOS hide-app shortcut. Configure Karabiner or another keyboard remapper to
+send `F13/F14/F15/F16` from `Caps+h/j/k/l`; `skhd` binds those private keys to
+yabai directional focus.
 
 Inside tmux:
 
@@ -112,6 +117,9 @@ Inside tmux:
 | `Alt + c` | Clone current project window |
 | `Alt + s` | Split top/bottom 50/50 |
 | `Alt + v` | Split left/right 50/50 |
+
+The command palette shows known direct shortcuts beside actions and includes
+Neovim quick actions when `nvim` is installed.
 
 ## Config Files
 

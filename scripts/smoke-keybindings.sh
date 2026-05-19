@@ -142,6 +142,9 @@ check_skhd_config() {
   local file="$1"
   local label="$2"
 
+  assert_file_contains "$file" "f13 : yabai -m window --focus west" "$label has private F13 west focus binding"
+  assert_file_contains "$file" "f16 : yabai -m window --focus east" "$label has private F16 east focus binding"
+  assert_file_not_contains "$file" "cmd - h : yabai -m window --focus west" "$label does not steal cmd+h for window focus"
   assert_file_contains "$file" "cmd + alt + shift - h : yabai -m window --resize" "$label has cmd+alt+shift+h resize binding"
   assert_file_contains "$file" "cmd + alt + shift - l : yabai -m window --resize" "$label has cmd+alt+shift+l resize binding"
   assert_file_contains "$file" "cmd + ctrl - 1 : yabai -m space --focus 1" "$label has cmd+ctrl+1 space focus binding"

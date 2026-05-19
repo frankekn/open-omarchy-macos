@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 # open-omarchy-macos skhd config
-# Omarchy-style bindings using cmd as SUPER.
+# Omarchy-inspired bindings adapted for macOS conflicts.
 # NOTE: Avoid cmd+q to preserve native macOS quit behavior.
 
 # Applications
@@ -9,10 +9,12 @@ cmd - return : open -na Ghostty 2>/dev/null || open -na Terminal
 cmd - space : open -na Raycast 2>/dev/null || osascript -e 'tell application "System Events" to keystroke space using command down'
 
 # Focus
-cmd - h : yabai -m window --focus west
-cmd - j : yabai -m window --focus south
-cmd - k : yabai -m window --focus north
-cmd - l : yabai -m window --focus east
+# F13-F16 are private window-manager keys intended to be emitted by a
+# Karabiner Caps layer, e.g. Caps+h/j/k/l -> F13/F14/F15/F16.
+f13 : yabai -m window --focus west
+f14 : yabai -m window --focus south
+f15 : yabai -m window --focus north
+f16 : yabai -m window --focus east
 
 # Swap
 cmd + shift - h : yabai -m window --swap west

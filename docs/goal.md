@@ -9,7 +9,8 @@ This is not a generic tmux plugin and not a clone of `tmux-palette`.
 
 The product goal is a safe, reversible, Omarchy-inspired macOS distro where:
 
-- macOS desktop control is handled by yabai/skhd with cmd-as-SUPER bindings.
+- macOS desktop control is handled by yabai/skhd, with private key-layer
+  bindings where native `cmd` shortcuts would conflict.
 - Ghostty/Terminal is only a launcher, not project state.
 - tmux is the persistent workspace layer.
 - tmux sessions are workspaces.

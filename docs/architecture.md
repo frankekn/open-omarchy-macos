@@ -91,6 +91,10 @@ installed as `~/.local/bin/open-omarchy-command-palette` and bound to `Alt+a`.
 It wraps Open Omarchy workflow actions, common tmux actions, macOS helpers,
 yabai/skhd utilities, and context-aware project tools.
 
+Desktop directional focus is intentionally not bound to `cmd+h/j/k/l` or
+`cmd+Arrow`. The desktop module binds private `F13`-`F16` events in `skhd`; a
+keyboard remapper such as Karabiner can emit those events from a Caps layer.
+
 ## Manifest Contract
 
 Install writes schema v1 manifests under

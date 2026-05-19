@@ -45,12 +45,21 @@ Alt+a   → command palette
 
 The palette is intentionally local and shell-based. It uses `fzf`, `tmux`, and
 the existing Open Omarchy helper scripts instead of installing a third-party
-plugin.
+plugin. Actions with direct shortcuts show their key binding in the picker, so
+the palette also works as a quick key reference.
 
 It includes pane/window/session actions, Open Omarchy workflow actions, macOS
 helpers, yabai/skhd utilities, and context-aware project tools such as file
-search, git branch checkout, npm scripts, Docker logs, GitHub PRs, and process
-monitors when those commands are available.
+search, git branch checkout, Neovim actions, npm scripts, Docker logs, GitHub
+PRs, and process monitors when those commands are available.
+
+## Desktop Focus
+
+Window focus uses a private key layer instead of global `cmd+h/j/k/l`.
+Configure Karabiner so `Caps+h/j/k/l` emits `F13/F14/F15/F16`; `skhd` maps
+those private keys to yabai west/south/north/east focus. This keeps the
+Vim-style direction model without stealing macOS app shortcuts such as
+`cmd+h`.
 
 ## Cloning the Current Layout
 
