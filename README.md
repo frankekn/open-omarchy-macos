@@ -98,6 +98,7 @@ Check current setup state:
 | `cmd + alt + shift + h/j/k/l` | Resize window (grow left/down/up/right by 30px) |
 | `cmd + alt + h/j/k/l` | Focus a different display (west/south/north/east) |
 | `cmd + ctrl + 1`…`cmd + ctrl + 9` | Focus Space N (cmd+N is left for app tabs) |
+| `cmd + shift + ctrl + 1`…`cmd + shift + ctrl + 9` | Move focused window to Space N and follow it |
 | `cmd + shift + q` | Close focused window |
 | `cmd + f` | Toggle zoom fullscreen |
 | `cmd + shift + space` | Toggle floating |
@@ -136,7 +137,7 @@ Edit these after install to customize behavior.
 ## Known Limitations
 
 - macOS cannot exactly reproduce Hyprland/Omarchy.
-- Moving windows between Spaces is limited without scripting addition.
+- Creating new Spaces still requires Mission Control (no scripting addition).
 - Native fullscreen creates a separate Space and may feel different from Hyprland fullscreen.
 - Some apps with native tabs (Terminal, Finder) may not tile predictably.
 - Terminal apps with Secure Keyboard Entry can block `skhd` from receiving keys.

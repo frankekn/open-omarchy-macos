@@ -149,6 +149,8 @@ check_skhd_config() {
   assert_file_contains "$file" "cmd + alt + shift - l : yabai -m window --resize" "$label has cmd+alt+shift+l resize binding"
   assert_file_contains "$file" "cmd + ctrl - 1 : yabai -m space --focus 1" "$label has cmd+ctrl+1 space focus binding"
   assert_file_contains "$file" "cmd + ctrl - 9 : yabai -m space --focus 9" "$label has cmd+ctrl+9 space focus binding"
+  assert_file_contains "$file" "cmd + shift + ctrl - 1 : yabai -m window --space 1" "$label has cmd+shift+ctrl+1 move-window binding"
+  assert_file_contains "$file" "cmd + shift + ctrl - 9 : yabai -m window --space 9" "$label has cmd+shift+ctrl+9 move-window binding"
 }
 
 check_repo() {
